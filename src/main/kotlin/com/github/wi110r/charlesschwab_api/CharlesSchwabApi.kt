@@ -5,6 +5,7 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.auth.Auth
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.auth.Tokens
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.auth.responses.AccessTokenResponse
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.auth.responses.RefreshTokenResponse
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses.Quote
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.FileHelper
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.NetworkClient
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.gson
@@ -147,7 +148,7 @@ object CharlesSchwabApi {
     }
 
     /** Returns Access Token. Will update the Access token if needed using a valid Refresh token */
-    fun get_access_token(): String {
+    private fun get_access_token(): String {
 
         // Check if tokens have been loaded
         if (tokens == null){
@@ -213,10 +214,30 @@ object CharlesSchwabApi {
      * - Requests need to have a header 'Authorization': 'Bearer <accessToken>'
      * - Requests related to account need to have the hash value of the account number
      * */
+    fun getQuote(symbol: String) {
+        val token = get_access_token()
+        val s = symbol.uppercase()
+        val req = Request.Builder()
+            .header("Authorization", "Bearer $token")
+            .header("accept", "application/json")
+            .get()
+            .url(market_data_base_endpoint + "/${s}/quotes")
+            .build()
+        val resp = NetworkClient.getClient().newCall(req).execute()
+        if (resp.isSuccessful){
+            val body = resp.body?.string()
+            val jsonObject = gson.fromJson(body, Map::class.java)
+            val assetJson = gson.toJson(jsonObject[s])
+            val asset = gson.fromJson(assetJson, Quote::class.java)
+            println(asset.basicData)
+        } else {
+            println("response not successful. Code: ${resp.code}")
+        }
+    }       // TODO Check for a non existant sym
 
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //    Market Data Start
+    //    Account Data Start
 
     fun getAccountNumbers() {
         val at = get_access_token()
@@ -239,15 +260,6 @@ object CharlesSchwabApi {
     }
 
     fun test() {
-        val at = get_access_token()
-        val req = Request.Builder()
-            .get()
-            .url(account_base_endpoint + account_numbers_endpoint)
-            .header("Authorization", "Bearer $at")
-            .header("accept", "application/json")
-            .build()
-
-        val resp = NetworkClient.getClient().newCall(req).execute()
-        println(resp.body?.string())
+        getQuote("SPY")
     }
 }
