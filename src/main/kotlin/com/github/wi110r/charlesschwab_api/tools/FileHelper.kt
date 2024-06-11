@@ -18,6 +18,20 @@ object FileHelper {
         }
     }
 
+    fun readFileLinesToList(path: String): List<String>? {
+        val file = File(path)
+
+        // Read the file line by line
+        try {
+            val lines = file.readLines()
+            return lines
+        } catch (e: Exception) {
+            com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.Log.w("readFileLinesToList",
+                "Error reading file: ${e.message}")
+            return null
+        }
+    }
+
     fun writeFile(path: String, txt: String) {
         val file = File(path)
 

@@ -1,8 +1,9 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses
 
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.Quote
 import com.google.gson.annotations.SerializedName
 
-data class Quote(
+data class QuoteResponse(
     @SerializedName("assetMainType") val assetMainType: String,
     @SerializedName("assetSubType") val assetSubType: String,
     @SerializedName("quoteType") val quoteType: String,
@@ -76,3 +77,68 @@ data class MinimumData(
     @SerializedName("regularMarketPercentChange") val regularMarketPercentChange: Double,
     @SerializedName("regularMarketTradeTime") val regularMarketTradeTime: Long
 )
+
+fun QuoteResponse.convertToQuote(): Quote {
+    return Quote(
+        assetMainType = this.assetMainType,
+        assetSubType = this.assetSubType,
+        quoteType = this.quoteType,
+        realtime = this.realtime,
+        ssid = this.ssid,
+        symbol = this.symbol,
+
+        avg10DaysVolume = this.fundamental.avg10DaysVolume,
+        avg1YearVolume = this.fundamental.avg1YearVolume,
+        divAmount = this.fundamental.divAmount,
+        divFreq = this.fundamental.divFreq,
+        divPayAmount = this.fundamental.divPayAmount,
+        divYield = this.fundamental.divYield,
+        eps = this.fundamental.eps,
+        fundLeverageFactor = this.fundamental.fundLeverageFactor,
+        lastEarningsDate = this.fundamental.lastEarningsDate,
+        peRatio = this.fundamental.peRatio,
+
+        week52High = this.basicData.week52High,
+        week52Low = this.basicData.week52Low,
+        askMICId = this.basicData.askMICId,
+        askPrice = this.basicData.askPrice,
+        askSize = this.basicData.askSize,
+        askTime = this.basicData.askTime,
+        bidMICId = this.basicData.bidMICId,
+        bidPrice = this.basicData.bidPrice,
+        bidSize = this.basicData.bidSize,
+        bidTime = this.basicData.bidTime,
+        closePrice = this.basicData.closePrice,
+        highPrice = this.basicData.highPrice,
+        lastMICId = this.basicData.lastMICId,
+        lastPrice = this.basicData.lastPrice,
+        lastSize = this.basicData.lastSize,
+        lowPrice = this.basicData.lowPrice,
+        mark = this.basicData.mark,
+        markChange = this.basicData.markChange,
+        markPercentChange = this.basicData.markPercentChange,
+        netChange = this.basicData.netChange,
+        netPercentChange = this.basicData.netPercentChange,
+        openPrice = this.basicData.openPrice,
+        postMarketChange = this.basicData.postMarketChange,
+        postMarketPercentChange = this.basicData.postMarketPercentChange,
+        quoteTime = this.basicData.quoteTime,
+        securityStatus = this.basicData.securityStatus,
+        totalVolume = this.basicData.totalVolume,
+        tradeTime = this.basicData.tradeTime,
+
+        cusip = this.reference.cusip,
+        description = this.reference.description,
+        exchange = this.reference.exchange,
+        exchangeName = this.reference.exchangeName,
+        isHardToBorrow = this.reference.isHardToBorrow,
+        isShortable = this.reference.isShortable,
+        htbRate = this.reference.htbRate,
+
+        regularMarketLastPrice = this.regular.regularMarketLastPrice,
+        regularMarketLastSize = this.regular.regularMarketLastSize,
+        regularMarketNetChange = this.regular.regularMarketNetChange,
+        regularMarketPercentChange = this.regular.regularMarketPercentChange,
+        regularMarketTradeTime = this.regular.regularMarketTradeTime
+    )
+}
