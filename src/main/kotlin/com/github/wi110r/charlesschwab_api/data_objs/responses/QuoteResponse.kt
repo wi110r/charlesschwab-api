@@ -1,6 +1,6 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses
 
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.Quote
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.StockQuote
 import com.google.gson.annotations.SerializedName
 
 data class QuoteResponse(
@@ -78,8 +78,8 @@ data class MinimumData(
     @SerializedName("regularMarketTradeTime") val regularMarketTradeTime: Long
 )
 
-fun QuoteResponse.convertToQuote(): Quote {
-    return Quote(
+fun QuoteResponse.convertToQuote(): StockQuote {
+    return StockQuote(
         assetMainType = this.assetMainType,
         assetSubType = this.assetSubType,
         quoteType = this.quoteType,

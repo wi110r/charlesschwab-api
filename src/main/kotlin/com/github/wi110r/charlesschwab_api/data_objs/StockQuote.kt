@@ -1,7 +1,7 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs
 
 
-data class Quote(
+data class StockQuote(
     val assetMainType: String,
     val assetSubType: String,
     val quoteType: String,
