@@ -15,7 +15,7 @@ on charles schwab developers website. All other fields should be as shown below.
 ```dtd
 CsApi.buildApi("Path\\toyourauthjsonfile.json")
 
-CsApi.login()
+CsApi.getApi().login()
 ```
 
 
