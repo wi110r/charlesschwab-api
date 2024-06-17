@@ -4,8 +4,8 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'com.github.wi110r'
-version = '1.0-SNAPSHOT'
+//group = 'com.github.wi110r'
+//version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
