@@ -5,7 +5,7 @@ data class Authorization (
     val secret: String = "",
 
     val accountNumber: String = "",
-    val actNumberHashValue: String = "",
+    val accountNumberHashValue: String = "",
 
     val refresh_token: String = "",
     val access_token: String = "",

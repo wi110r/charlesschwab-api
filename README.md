@@ -35,3 +35,9 @@ val csapi = CsApi.getApi()
 println(csapi.getStockQuote("AAPL"))
 ```
 
+
+<h3>NOTES...</h3>
+
+All account related requests require the hash value of the account number
+
+

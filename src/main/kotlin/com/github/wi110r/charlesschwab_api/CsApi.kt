@@ -19,7 +19,6 @@ import okhttp3.FormBody
 import okhttp3.Request
 import java.text.DecimalFormat
 import java.util.*
-import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
 
@@ -146,7 +145,7 @@ class CsApi private constructor(
                 auth.key,
                 auth.secret,
                 accountNumber = "",
-                actNumberHashValue =  "",
+                accountNumberHashValue =  "",
                 refresh_token = tokenResponse.refresh_token,
                 access_token = tokenResponse.access_token,
                 id_token = tokenResponse.id_token,
@@ -176,7 +175,7 @@ class CsApi private constructor(
                 auth.key,
                 auth.secret,
                 accountNumber = actKeys.accountNumber,
-                actNumberHashValue =  actKeys.hashValue,
+                accountNumberHashValue =  actKeys.hashValue,
                 refresh_token = tokenResponse.refresh_token,
                 access_token = tokenResponse.access_token,
                 id_token = tokenResponse.id_token,
@@ -238,7 +237,7 @@ class CsApi private constructor(
                         auth.key,
                         auth.secret,
                         auth.accountNumber,
-                        auth.actNumberHashValue,
+                        auth.accountNumberHashValue,
                         auth.refresh_token,
                         body.access_token,
                         body.id_token,
