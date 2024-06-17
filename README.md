@@ -1,6 +1,7 @@
 <h2>INSTRUCTIONS...</h2>
 
 <h3>CREATE AUTH JSON</h3>
+
 Please create a json file with the following information...
 (This includes the app-key and app-secret found in your app settings
 on charles schwab developers website. All other fields should be as shown below.)
