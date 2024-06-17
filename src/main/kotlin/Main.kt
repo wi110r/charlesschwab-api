@@ -5,7 +5,7 @@ import java.time.*
 import java.util.concurrent.*
 
 fun main() {
-
+    CharlesSchwabApi.test()
 }
 
 

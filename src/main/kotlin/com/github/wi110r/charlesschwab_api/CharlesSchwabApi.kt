@@ -5,11 +5,9 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.auth.Auth
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.auth.Tokens
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.auth.responses.AccessTokenResponse
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.auth.responses.RefreshTokenResponse
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.OptionChain
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.OptionQuote
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.StockQuote
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.TopStockLists
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.*
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses.*
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChart
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.*
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.Log
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.NetworkClient
@@ -161,66 +159,73 @@ object CharlesSchwabApi {
     }
 
     /** Returns Access Token. Will update the Access token if needed using a valid Refresh token */
-    private fun getAccessToken(): String {
+    private fun getAccessToken(): String? {
 
         synchronized(threadLockAccessToken){
-            // Check if tokens have been loaded
-            if (tokens == null) {
-                try {
-                    tokens = gson.fromJson(FileHelper.readFileToString(TOKENS_JSON), Tokens::class.java)
-                } catch (e: Exception) {
-                    println(
-                        "\nWarning -- 'resources\\tokens.json' not found. This file is needed to update the tokens.\n" +
-                                "Please use function CSAuth().login() and follow the steps to create the file.\n" +
-                                "This will have to be done once per week to maintain valid Refresh Token"
-                    )
+            try {
+                // Check if tokens have been loaded
+                if (tokens == null) {
+                    try {
+                        tokens = gson.fromJson(FileHelper.readFileToString(TOKENS_JSON), Tokens::class.java)
+                    } catch (e: Exception) {
+                        println(
+                            "\nWarning -- 'resources\\tokens.json' not found. This file is needed to update the tokens.\n" +
+                                    "Please use function CSAuth().login() and follow the steps to create the file.\n" +
+                                    "This will have to be done once per week to maintain valid Refresh Token"
+                        )
+                        exitProcess(0)
+                    }
+                }
+
+                // Check if refresh token has expired
+                if (tokens!!.refreshTokenExpiryInMs < System.currentTimeMillis()) {
+                    println("\nWarning -- Refresh Token has expired. Please use function CSAuth().login() to update.")
                     exitProcess(0)
                 }
+
+                // Check if access token needs to be updated, if not return access token
+                if (tokens!!.accessTokenExpiryInMs > System.currentTimeMillis()) {
+                    return tokens!!.access_token
+                }
+
+                // Use refresh token to update access token
+                val postBody = FormBody.Builder()
+                    .add("grant_type", "refresh_token")
+                    .add("refresh_token", tokens!!.refresh_token)
+                    .build()
+
+                val base64Credentials = Base64.getEncoder().encodeToString("${authKeys.key}:${authKeys.secret}".toByteArray())
+                val request = Request.Builder()
+                    .url(auth_base_endpoint + "/token")
+                    .post(postBody)
+                    .addHeader("Authorization", "Basic $base64Credentials")
+                    .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                    .build()
+
+                val requestCall = NetworkClient.getClient().newCall(request).execute()
+
+                if (requestCall.isSuccessful) {
+                    val body = gson.fromJson(requestCall.body?.string(), AccessTokenResponse::class.java)
+                    val newAccessExpiry = System.currentTimeMillis() + 1_800_000 - 60_000       // Minus 1min for time safety
+                    val newToken = Tokens(
+                        body.refresh_token,
+                        body.access_token,
+                        body.id_token,
+                        accessTokenExpiryInMs = newAccessExpiry,
+                        refreshTokenExpiryInMs = tokens!!.refreshTokenExpiryInMs,
+                    )
+                    tokens = newToken
+                    FileHelper.writeFile(TOKENS_JSON, gson.toJson(newToken))
+                    return tokens!!.access_token
+                }
+                else {
+                    Log.w("getAccessToken()", "Failed Response: ${requestCall.body?.string()}")
+                    return null
+                }
+            } catch (e: Exception){
+                return null
+
             }
-
-            // Check if refresh token has expired
-            if (tokens!!.refreshTokenExpiryInMs < System.currentTimeMillis()) {
-                println("\nWarning -- Refresh Token has expired. Please use function CSAuth().login() to update.")
-                exitProcess(0)
-            }
-
-            // Check if access token needs to be updated, if not return access token
-            if (tokens!!.accessTokenExpiryInMs > System.currentTimeMillis()) {
-                return tokens!!.access_token
-            }
-
-            // Use refresh token to update access token
-            val postBody = FormBody.Builder()
-                .add("grant_type", "refresh_token")
-                .add("refresh_token", tokens!!.refresh_token)
-                .build()
-
-            val base64Credentials = Base64.getEncoder().encodeToString("${authKeys.key}:${authKeys.secret}".toByteArray())
-            val request = Request.Builder()
-                .url(auth_base_endpoint + "/token")
-                .post(postBody)
-                .addHeader("Authorization", "Basic $base64Credentials")
-                .addHeader("Content-Type", "application/x-www-form-urlencoded")
-                .build()
-
-            val requestCall = NetworkClient.getClient().newCall(request).execute()
-
-            if (requestCall.isSuccessful) {
-                val body = gson.fromJson(requestCall.body?.string(), AccessTokenResponse::class.java)
-                val newAccessExpiry = System.currentTimeMillis() + 1_800_000 - 60_000       // Minus 1min for time safety
-                val newToken = Tokens(
-                    body.refresh_token,
-                    body.access_token,
-                    body.id_token,
-                    accessTokenExpiryInMs = newAccessExpiry,
-                    refreshTokenExpiryInMs = tokens!!.refreshTokenExpiryInMs,
-                )
-                tokens = newToken
-                FileHelper.writeFile(TOKENS_JSON, gson.toJson(newToken))
-                return tokens!!.access_token
-            }
-            println("Accesstoken not success")
-            return ""
         }
     }
 
@@ -234,41 +239,57 @@ object CharlesSchwabApi {
      * - Requests related to account need to have the hash value of the account number
      * */
     private fun getQuote(symbol: String): String? {
-        val token = getAccessToken()
-        val s = symbol.uppercase()
-        val req = Request.Builder()
-            .header("Authorization", "Bearer $token")
-            .header("accept", "application/json")
-            .get()
-            .url(market_data_base_endpoint + "/${s}/quotes")
-            .build()
-        val resp = NetworkClient.getClient().newCall(req).execute()
-        if (resp.isSuccessful) {
-            return resp.body?.string()
 
-        } else {
-            Log.w("getQuote()", "Response not Successful. Code: ${resp.code}. Message: ${resp.message}\n" +
-                    "Body: ${resp.body}")
+        try {
+            val token = getAccessToken()
+            val s = symbol.uppercase()
+            val req = Request.Builder()
+                .header("Authorization", "Bearer $token")
+                .header("accept", "application/json")
+                .get()
+                .url(market_data_base_endpoint + "/${s}/quotes")
+                .build()
+            val resp = NetworkClient.getClient().newCall(req).execute()
+            if (resp.isSuccessful) {
+                return resp.body?.string()
+
+            } else {
+                Log.w("getQuote()", "Response not Successful. Code: ${resp.code}. Message: ${resp.message}\n" +
+                        "Body: ${resp.body}")
+                return null
+            }
+        } catch (e: Exception){
+            Log.w("getQuote()", "Failed Response. ${e.message}")
             return null
         }
     }
 
-    fun getStockQuote(symbol: String): StockQuote {
-        val s = symbol.uppercase()
-        val body = getQuote(s)
-        val jsonObject = gson.fromJson(body, Map::class.java)
-        val assetJson = gson.toJson(jsonObject[s])
-        val asset = gson.fromJson(assetJson, QuoteResponse::class.java)
-        return asset.convertToQuote()
+    fun getStockQuote(symbol: String): StockQuote? {
+        try {
+            val s = symbol.uppercase()
+            val body = getQuote(s)
+            val jsonObject = gson.fromJson(body, Map::class.java)
+            val assetJson = gson.toJson(jsonObject[s])
+            val asset = gson.fromJson(assetJson, QuoteResponse::class.java)
+            return asset.convertToQuote()
+        } catch (e: Exception) {
+         Log.w("getStockQuote()", "Failed Response: ${e.message}")
+         return null
+        }
     }
 
-    fun getOptionQuote(symbol: String): OptionQuote {
-        val s = symbol.uppercase()
-        val body = getQuote(s)
-        val jsonObject = gson.fromJson(body, Map::class.java)
-        val assetJson = gson.toJson(jsonObject[s])
-        val asset = gson.fromJson(assetJson, OptionQuoteResp::class.java).convertToOptionQuote()
-        return asset
+    fun getOptionQuote(symbol: String): OptionQuote? {
+        try {
+            val s = symbol.uppercase()
+            val body = getQuote(s)
+            val jsonObject = gson.fromJson(body, Map::class.java)
+            val assetJson = gson.toJson(jsonObject[s])
+            val asset = gson.fromJson(assetJson, OptionQuoteResp::class.java).convertToOptionQuote()
+            return asset
+        }catch (e: Exception) {
+            Log.w("getOptionQuote()", "Failed Response: ${e.message}")
+            return null
+        }
     }
 
     fun getOptionChain(
@@ -281,108 +302,159 @@ object CharlesSchwabApi {
         fromDate: Long? = null,
         toDate: Long? = null,
     ) : OptionChain? {
-        val fDate = if (fromDate == null)
-            convertTimestampToDateyyyyMMdd(System.currentTimeMillis())
-        else convertTimestampToDateyyyyMMdd(fromDate)
-
-        val tDate = if (toDate == null)                                         // + 1 week
-            convertTimestampToDateyyyyMMdd(System.currentTimeMillis() + 604_800_000L)
-        else convertTimestampToDateyyyyMMdd(toDate)
-
-        // TODO rebuild call/putexpdatemap. It returns the indiv options in a list format
-        val params = mutableListOf<String>()
-        params.add("symbol=${symbol.uppercase()}")
-        contractType?.let { params.add("contractType=$it") }
-        strikeCount?.let { params.add("strikeCount=$it") }
-        includeUnderlyingQuote?.let { params.add("includeUnderlyingQuote=$it") }
-        strike?.let { params.add("strike=$it") }
-        range?.let { params.add("range=$it") }
-        fromDate?.let { params.add("fromDate=${fDate }") }
-        toDate?.let { params.add("toDate=${tDate}") }
-
-        val url = "$market_data_base_endpoint/chains?${params.joinToString("&")}"
-        val token = getAccessToken()
-        val req = Request.Builder()
-            .header("Authorization", "Bearer $token")
-            .header("accept", "application/json")
-            .get()
-            .url(url)
-            .build()
-        val resp = NetworkClient.getClient().newCall(req).execute()
         try {
-            if (resp.isSuccessful) {
-                val body = resp.body?.string()
-                val ocr = gson.fromJson(body, OptionChainResponse::class.java)
-                val cExpiryMap = mutableMapOf<String, Map<String, Option>>()
-                val pExpiryMap = mutableMapOf<String, Map<String, Option>>()
-                for (date in ocr.callExpDateMap.keys){
-                    val callStrikeMapOrig = ocr.callExpDateMap.get(date)!!
-                    val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
-                    val csf = mutableMapOf<String, Option>()
-                    val psf = mutableMapOf<String, Option>()
-                    for (strike in callStrikeMapOrig.keys) {
-                        csf.put(strike, callStrikeMapOrig[strike]!!.first())
-                        psf.put(strike, putStrikeMapOrig[strike]!!.first())
-                    }
-                    cExpiryMap.put(date, csf)
-                    pExpiryMap.put(date, psf)
-                }
-                return ocr.convertToOptionChain(cExpiryMap, pExpiryMap)
-            }
-            else {
-                Log.w("getOptionChain", "Request Failed, MSG:\t" + resp.body?.string())
-                return null
-            }
-        } catch (e: Exception){
+            val fDate = if (fromDate == null)
+                convertTimestampToDateyyyyMMdd(System.currentTimeMillis())
+            else convertTimestampToDateyyyyMMdd(fromDate)
 
+            val tDate = if (toDate == null)                                         // + 1 week
+                convertTimestampToDateyyyyMMdd(System.currentTimeMillis() + 604_800_000L)
+            else convertTimestampToDateyyyyMMdd(toDate)
+
+            // TODO rebuild call/putexpdatemap. It returns the indiv options in a list format
+            val params = mutableListOf<String>()
+            params.add("symbol=${symbol.uppercase()}")
+            contractType?.let { params.add("contractType=$it") }
+            strikeCount?.let { params.add("strikeCount=$it") }
+            includeUnderlyingQuote?.let { params.add("includeUnderlyingQuote=$it") }
+            strike?.let { params.add("strike=$it") }
+            range?.let { params.add("range=$it") }
+            fromDate?.let { params.add("fromDate=${fDate }") }
+            toDate?.let { params.add("toDate=${tDate}") }
+
+            val url = "$market_data_base_endpoint/chains?${params.joinToString("&")}"
+            val token = getAccessToken()
+            val req = Request.Builder()
+                .header("Authorization", "Bearer $token")
+                .header("accept", "application/json")
+                .get()
+                .url(url)
+                .build()
+                val resp = NetworkClient.getClient().newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    val ocr = gson.fromJson(body, OptionChainResponse::class.java)
+                    val cExpiryMap = mutableMapOf<String, Map<String, Option>>()
+                    val pExpiryMap = mutableMapOf<String, Map<String, Option>>()
+                    for (date in ocr.callExpDateMap.keys){
+                        val callStrikeMapOrig = ocr.callExpDateMap.get(date)!!
+                        val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
+                        val csf = mutableMapOf<String, Option>()
+                        val psf = mutableMapOf<String, Option>()
+                        for (strike in callStrikeMapOrig.keys) {
+                            csf.put(strike, callStrikeMapOrig[strike]!!.first())
+                            psf.put(strike, putStrikeMapOrig[strike]!!.first())
+                        }
+                        cExpiryMap.put(date, csf)
+                        pExpiryMap.put(date, psf)
+                    }
+                    return ocr.convertToOptionChain(cExpiryMap, pExpiryMap)
+                }
+                else {
+                    Log.w("getOptionChain", "Request Failed, MSG:\t" + resp.body?.string())
+                    return null
+                }
+        } catch (e: Exception){
+            Log.w("getOptionChain", "Request Failed. ${e.message}")
+            return null
+        }
+    }
+
+
+    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
+
+        try {
+            val today = System.currentTimeMillis()
+            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
+
+            topStockLists = gson.fromJson(FileHelper.readFileToString(TOP_STOCK_LISTS_JSON), TopStockLists::class.java)
+
+            val targets = (topStockLists!!.etfTop25 + topStockLists!!.sp100 + topStockLists!!.nasdaq100).toSet()
+            val failed = mutableListOf<String>()
+            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
+            // Build tasks
+            for (t in targets){
+                val callable = Callable {
+                    val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
+                    if (chainResp == null) {
+                        failed.add(t)
+                        println(t + " FAILED. NULL RESPONSE")
+                        return@Callable Pair(t, 0)
+                    }
+                    var totalVol = 0
+                    val expDate = chainResp!!.callExpDateMap.keys.first()
+                    val callStrikeMap = chainResp.callExpDateMap[expDate]!!
+                    val putStrikeMap = chainResp.putExpDateMap[expDate]!!
+                    for (s in callStrikeMap!!.keys) {
+                        totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
+                    }
+                    return@Callable Pair(t, totalVol)
+                }
+                callableTaskList.add(callable)
+            }
+
+            val results = threadPoolHandler(callableTaskList)
+                .filterNotNull()
+                .sortedByDescending { it.second }
+                .take(returnListSize)
+            return results
+        } catch (e: Exception){
+            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
+            return null
+        }
+    }
+
+
+    fun getHistoricData(
+        symbol: String,
+        periodType: String = "day",     // day, month, year, ytd
+        period: Int = 10,
+        frequencyType: String = "minute",
+        frequency: Int = 5,
+        startDate: Long? = null,        // not needed
+        endDate: Long? = null,
+        needExtendedHoursData: Boolean = true
+
+    ): StockChart? {
+        try {
+
+            val endpoint = market_data_base_endpoint + "/pricehistory"
+
+            val end = endDate ?: System.currentTimeMillis()
+            val params = mutableListOf<String>()
+            params.add("symbol" + "=" + symbol)
+            params.add("periodType" + "=" + periodType)
+            params.add("period" + "=" + period.toString())
+            params.add("frequencyType" + "=" + frequencyType)
+            params.add("frequency" + "=" + frequency.toString())
+            params.add("endDate" + "=" + end.toString())
+            params.add("needExtendedHoursData" + "=" + needExtendedHoursData.toString())
+            if (startDate != null) params.add("startDate=$startDate")
+
+            val url = endpoint + "?" + params.joinToString("&")
+            val token = getAccessToken()
+            val req = Request.Builder()
+                .header("Authorization", "Bearer $token")
+                .header("accept", "application/json")
+                .get()
+                .url(url)
+                .build()
+                val resp = NetworkClient.getClient().newCall(req).execute()
+                if (resp.isSuccessful) {
+                    val body = resp.body?.string()
+                    val chartResp = gson.fromJson(body, ChartResponse::class.java)
+                    val timeInterval = "$frequency${frequencyType.get(0)}"
+                    val periodRange = "$period${periodType.get(0)}"
+                    return chartResp.convertToStockChart(timeInterval, periodRange)
+
+                } else {
+                    Log.w("getHistoricData()", "Failed Response. ${resp.body?.string()}")
+                }
+        } catch (e: Exception) {
+            Log.w("getHistoricData()", "Failed Response. Null")
         }
         return null
     }
-
-
-    /* TODO
-    *   - impl returnListSize param
-    *   - return something
-    *   - maybe make executor into class
-    *   - remove print statements*/
-    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
-        val today = System.currentTimeMillis()
-        val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
-
-        topStockLists = gson.fromJson(FileHelper.readFileToString(TOP_STOCK_LISTS_JSON), TopStockLists::class.java)
-
-        val targets = (topStockLists!!.etfTop25 + topStockLists!!.sp100 + topStockLists!!.nasdaq100).toSet()
-        val failed = mutableListOf<String>()
-        val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
-        // Build tasks
-        for (t in targets){
-            val callable = Callable {
-                val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
-                if (chainResp == null) {
-                    failed.add(t)
-                    println(t + " FAILED. NULL RESPONSE")
-                    return@Callable Pair(t, 0)
-                }
-                var totalVol = 0
-                val expDate = chainResp!!.callExpDateMap.keys.first()
-                val callStrikeMap = chainResp.callExpDateMap[expDate]!!
-                val putStrikeMap = chainResp.putExpDateMap[expDate]!!
-                for (s in callStrikeMap!!.keys) {
-                    totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
-                }
-                return@Callable Pair(t, totalVol)
-            }
-            callableTaskList.add(callable)
-        }
-
-        val results = threadPoolHandler(callableTaskList).filterNotNull().sortedByDescending { it.second }
-        return results
-    }
-
-    fun getHistoricData() {
-
-    }
-
 
 
         ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -409,6 +481,8 @@ object CharlesSchwabApi {
 }
 
     fun test() {
-
+        val x = getHistoricData("SPY")
+        println(x?.periodSize)
+        println(x?.candleSize)
     }
 }

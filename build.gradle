@@ -1,5 +1,7 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.9.23'
+    id 'java-library'
+    id 'maven-publish'
 }
 
 group = 'com.github.wi110r'
@@ -21,4 +23,15 @@ test {
 }
 kotlin {
     jvmToolchain(8)
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId 'com.github.wi110r'
+            artifactId 'charlesschwab-api'
+            version '1.0.alpha'
+            from components.java
+        }
+    }
 }
