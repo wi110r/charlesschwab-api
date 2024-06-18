@@ -7,18 +7,16 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.OptionCha
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.OptionQuote
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.StockQuote
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.TopStockLists
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.auth.AccountKeys
+import com.github.wi110r.charlesschwab_api.data_objs.responses.AccountNumbersResponse
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses.*
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChart
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.*
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.Log
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.NetworkClient
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.w
 import com.google.gson.reflect.TypeToken
 import okhttp3.FormBody
 import okhttp3.Request
 import java.text.DecimalFormat
 import java.util.*
+import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
 
@@ -28,29 +26,32 @@ class CsApi private constructor(
     private var pathToAuthFile: String = p
     private val threadLockAccessToken = Any()
     private var auth: Authorization
-    private var topStockLists: TopStockLists? = null
+    private lateinit var topStockLists: TopStockLists
     private val account_base_endpoint = "https://api.schwabapi.com/trader/v1"
     private val market_data_base_endpoint = "https://api.schwabapi.com/marketdata/v1"
     private val auth_base_endpoint = "https://api.schwabapi.com/v1/oauth"
 
     companion object {
-        private var api: CsApi? = null
+        @Volatile private var api: CsApi? = null
+        private var path: String? = null
 
         fun getApi(): CsApi {
             if (api != null) {
                 return api!!
             }
             else {
-                println("API Has not been built yet. ")
+                println("CsApi() Has not been built yet. Please provide path to Auth Json file.")
                 exitProcess(0)
             }
         }
 
-        fun buildApi(p: String): CsApi {
+        fun buildApi(pathToAuthFile: String) {
             if (api == null){
-                api = CsApi(p)
+                path = pathToAuthFile
+                api = CsApi(pathToAuthFile)
+            } else {
+                println("CsApi() Has already been built with Auth JSON Path set to: $path")
             }
-            return api!!
         }
     }
 
@@ -78,13 +79,14 @@ class CsApi private constructor(
         }
         // Check status of Refresh Token
         init_check_refresh_token()
+        loadTopStocksList()
     }
 
     /** Checks the status of the Refresh token. Notifies how many days are left until Refresh token expires. */
     private fun init_check_refresh_token() {
 
         // Check for refresh token expiry
-        val timeUntilExpiry = (auth!!.refreshTokenExpiryInMs - System.currentTimeMillis()).toDouble()
+        val timeUntilExpiry = (auth.refreshTokenExpiryInMs - System.currentTimeMillis()).toDouble()
         if (timeUntilExpiry > 0) {
 //                val daysTilExpiry = DecimalFormat("#.###").format((timeUntilExpiry / 86_400_000))
             val daysTilExpiry = (timeUntilExpiry / (86_400_000).toDouble())
@@ -98,6 +100,12 @@ class CsApi private constructor(
             println("#############################################################################################")
         }
     }
+
+    private fun loadTopStocksList() {
+        val l = FileHelper.readFileToString("src/main/resources/top_stock_lists.json")
+        topStockLists = gson.fromJson(l, TopStockLists::class.java)
+    }
+
 
     /** Peforms the login required to obtain Refresh Token. Refresh Token expires every 7 days. */
     fun login() {
@@ -156,7 +164,7 @@ class CsApi private constructor(
 
             println("Tokens Acquired...Now fetching Account Numbers...")
             var attempts = 0
-            var actKeys: AccountKeys? = null
+            var actKeys: AccountNumbersResponse? = null
             while (attempts != 5) {
                 actKeys = getAccountNumbers()
                 if (actKeys != null){
@@ -264,11 +272,10 @@ class CsApi private constructor(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //    Market Data Start
 
-    /**
-     * Notes
-     * - Requests need to have a header 'Authorization': 'Bearer <accessToken>'
-     * - Requests related to account need to have the hash value of the account number
-     * */
+    fun getTopStocks(): TopStockLists {
+        return topStockLists!!
+    }
+
     private fun getQuote(symbol: String): String? {
 
         try {
@@ -342,7 +349,6 @@ class CsApi private constructor(
                 convertTimestampToDateyyyyMMdd(System.currentTimeMillis() + 604_800_000L)
             else convertTimestampToDateyyyyMMdd(toDate)
 
-            // TODO rebuild call/putexpdatemap. It returns the indiv options in a list format
             val params = mutableListOf<String>()
             params.add("symbol=${symbol.uppercase()}")
             contractType?.let { params.add("contractType=$it") }
@@ -391,49 +397,53 @@ class CsApi private constructor(
         }
     }
 
-//
-//    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
-//
-//        try {
-//            val today = System.currentTimeMillis()
-//            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
-//
-//            topStockLists = gson.fromJson(FileHelper.readFileToString("resources/top_stock_lists.json"), TopStockLists::class.java)
-//
-//            val targets = (topStockLists!!.etfTop25 + topStockLists!!.sp100 + topStockLists!!.nasdaq100).toSet()
-//            val failed = mutableListOf<String>()
-//            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
-//            // Build tasks
-//            for (t in targets){
-//                val callable = Callable {
-//                    val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
-//                    if (chainResp == null) {
-//                        failed.add(t)
-//                        println(t + " FAILED. NULL RESPONSE")
-//                        return@Callable Pair(t, 0)
-//                    }
-//                    var totalVol = 0
-//                    val expDate = chainResp!!.callExpDateMap.keys.first()
-//                    val callStrikeMap = chainResp.callExpDateMap[expDate]!!
-//                    val putStrikeMap = chainResp.putExpDateMap[expDate]!!
-//                    for (s in callStrikeMap!!.keys) {
-//                        totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
-//                    }
-//                    return@Callable Pair(t, totalVol)
-//                }
-//                callableTaskList.add(callable)
-//            }
-//
-//            val results = threadPoolHandler(callableTaskList)
-//                .filterNotNull()
-//                .sortedByDescending { it.second }
-//                .take(returnListSize)
-//            return results
-//        } catch (e: Exception){
-//            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
-//            return null
-//        }
-//    }
+
+    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
+
+        try {
+            val today = System.currentTimeMillis()
+            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
+
+            val targets = (topStockLists.etfTop25 + topStockLists.sp100 + topStockLists.nasdaq100).toSet()
+            val failed = mutableListOf<String>()
+            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
+            // Build tasks
+            for (t in targets){
+                val callable = Callable {
+                    try {
+                        val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
+                        if (chainResp == null) {
+                            failed.add(t)
+                            println(t + " FAILED. NULL RESPONSE")
+                            return@Callable Pair(t, 0)
+                        }
+                        var totalVol = 0
+                        val expDate = chainResp!!.callExpDateMap.keys.first()
+                        val callStrikeMap = chainResp.callExpDateMap[expDate]!!
+                        val putStrikeMap = chainResp.putExpDateMap[expDate]!!
+                        for (s in callStrikeMap!!.keys) {
+                            totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
+                        }
+                        return@Callable Pair(t, totalVol)
+
+                    } catch (e: Exception) {
+                        println("$t Failed")
+                        return@Callable Pair(t, 0)
+                    }
+                }
+                callableTaskList.add(callable)
+            }
+
+            val results = threadPoolHandler(callableTaskList)
+                .filterNotNull()
+                .sortedByDescending { it.second }
+                .take(returnListSize)
+            return results
+        } catch (e: Exception){
+            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
+            return null
+        }
+    }
 
 
     fun getHistoricData(
@@ -491,7 +501,7 @@ class CsApi private constructor(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //    Account Data Start
 
-    private fun getAccountNumbers(): AccountKeys?{
+    private fun getAccountNumbers(): AccountNumbersResponse?{
         val at = getAccessToken()
         val req = Request.Builder()
             .get()
@@ -503,8 +513,8 @@ class CsApi private constructor(
         val resp = NetworkClient.getClient().newCall(req).execute()
         if (resp.isSuccessful) {
             val body = resp.body?.string()
-            val accountListType = object : TypeToken<List<AccountKeys>>() {}.type
-            val accountKeys = gson.fromJson<List<AccountKeys>?>(body, accountListType).get(0)
+            val accountListType = object : TypeToken<List<AccountNumbersResponse>>() {}.type
+            val accountKeys = gson.fromJson<List<AccountNumbersResponse>?>(body, accountListType).get(0)
 
             return accountKeys
         } else {
