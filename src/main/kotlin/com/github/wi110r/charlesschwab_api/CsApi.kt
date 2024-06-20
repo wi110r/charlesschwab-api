@@ -109,7 +109,9 @@ class CsApi private constructor(
     }
 
     private fun loadTopStocksList() {
-        val l = FileHelper.readFileToString("src/main/resources/top_stock_lists.json")
+//        val l = FileHelper.readFileToString("src/main/resources/top_stock_lists.json")
+        val l = FileHelper.loadResourceToString("top_stock_lists.json")
+
         topStockLists = gson.fromJson(l, TopStockLists::class.java)
     }
 

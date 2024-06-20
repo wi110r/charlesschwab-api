@@ -1,7 +1,11 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.tools
 
+import com.sun.xml.internal.ws.api.ResourceLoader
 import java.io.File
 import java.io.FileWriter
+import java.io.InputStream
+import java.nio.charset.Charset
+import java.nio.file.Paths
 
 object FileHelper {
 
@@ -39,6 +43,11 @@ object FileHelper {
             writer.write(txt)
         }
         println("\nFILE SAVED: $path.\n\"${txt.subSequence(0, 80)}...\"")
+    }
+
+    fun loadResourceToString(resourceName: String): String {
+        val inputStream: InputStream? = object {}.javaClass.classLoader.getResourceAsStream(resourceName)
+        return inputStream!!.bufferedReader(Charset.forName("UTF-8")).use { it.readText() }
     }
 
 }
