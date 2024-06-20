@@ -4,8 +4,6 @@ plugins {
     id 'maven-publish'
 }
 
-//group = 'com.github.wi110r'
-//version = '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
@@ -30,7 +28,7 @@ publishing {
         maven(MavenPublication) {
             groupId 'com.github.wi110r'
             artifactId 'charlesschwab-api'
-            version '1.0.alpha'
+            version '1.1.alpha'
             from components.java
         }
     }

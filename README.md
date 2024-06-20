@@ -1,55 +1,33 @@
 <h2>INSTRUCTIONS...</h2>
 
-<h3>CREATE AUTH JSON</h3>
+<h3>INITIAL LOGIN - Must be done once per week.</h3>
 
-Please create a json file with the following information and copy the path...
-(This includes the app-key and app-secret found in your app settings
-on charles schwab developers website. All other fields should be as shown below.)
+Follow login instructions in the console to login.
+Once a blank webpage is loaded, copy the url and paste into console and press ENTER.
+The access token, refresh token, and account keys will be saved to your auth file path.
+You will need to login like this once per week.
 
-
-```json
-{
-  "key": "your-key",
-  "secret": "your-secret",
-  "accountNumber": "",
-  "actNumberHashValue": "",
-  "refresh_token": "",
-  "access_token": "",
-  "id_token": "",
-  "accessTokenExpiryInMs": 0,
-  "refreshTokenExpiryInMs": 0
-}
-```
-
-
-<h3>LOGIN - Once per week.</h3>
+Auth info is saved locally. A path can be provided or left null.
 
 ```kotlin
-CsApi.buildApi("Path\\toyourauthjsonfile.json")
-
-CsApi.getApi().login()
+fun main() {
+    val csApi = CsApi.buildApi("your-key", "your-secret", "path/to/save/auth.json")
+    csApi.login()
+}
 ```
-
-
-Follow login instructions in output to login.
-Once a blank webpage is loaded, copy the url and paste into console and press ENTER.
-The access token, refresh token, and account keys will be saved to your json file path.
-You will need to login like this once per week.
 
 
 <h3>API is ready to use...</h3>
 
 ```kotlin
-CsApi.buildApi("Path\\toyourauthjsonfile.json")
+    val csApi = CsApi.buildApi("your-key", "your-secret", "path/to/save/auth.json")
 
-val csapi = CsApi.getApi()
-
-println(csapi.getStockQuote("AAPL"))
+    println(csApi.getStockQuote("AAPL"))
 ```
 
 
 <h3>NOTES...</h3>
 
-All account related requests require the hash value of the account number
+
 
 

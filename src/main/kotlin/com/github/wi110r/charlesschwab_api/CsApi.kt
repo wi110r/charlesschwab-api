@@ -21,15 +21,17 @@ import kotlin.system.exitProcess
 
 
 class CsApi private constructor(
-    p: String
+    appKey: String,
+    appSecret: String,
+    authSavePath: String? = null,
 ) {
-    private var pathToAuthFile: String = p
     private val threadLockAccessToken = Any()
     private var auth: Authorization
     private lateinit var topStockLists: TopStockLists
     private val account_base_endpoint = "https://api.schwabapi.com/trader/v1"
     private val market_data_base_endpoint = "https://api.schwabapi.com/marketdata/v1"
     private val auth_base_endpoint = "https://api.schwabapi.com/v1/oauth"
+    private val authPath: String
 
     companion object {
         @Volatile private var api: CsApi? = null
@@ -45,41 +47,46 @@ class CsApi private constructor(
             }
         }
 
-        fun buildApi(pathToAuthFile: String) {
+        fun buildApi(
+            appKey: String,
+            appSecret: String,
+            savePath: String
+        ): CsApi {
             if (api == null){
-                path = pathToAuthFile
-                api = CsApi(pathToAuthFile)
+                api = CsApi(appKey, appSecret, savePath)
+                return api!!
             } else {
                 println("CsApi() Has already been built with Auth JSON Path set to: $path")
+                return api!!
             }
         }
     }
 
     init {
+
+        authPath = authSavePath ?: "csApi_auth.json"
         // Try to load auth keys
-        try {
-            auth = gson.fromJson(FileHelper.readFileToString(pathToAuthFile), Authorization::class.java)
-        } catch (e: Exception) {
-            println(
-                "\nWARNING -- 'pathToAuthFile: String' not found. This file is needed for the APP KEY and APP SECRET codes.\n" +
-                        "Please create a JSON file that contains the following key value pairs:\n" +
-                        "'key' : 'your app key'\n" +
-                        "'secret' : 'your app secret'\n" +
-                        "'accountNumber': ''\n"  +
-                        "'hashValue': ''\n" +
-                        "'refresh_token': ''\n" +
-                        "'access_token': ''\n" +
-                        "'id_token': ''\n" +
-                        "'accessTokenExpiryInMs': 0\n" +
-                        "'accessTokenExpiryInMs': 0\n" +
-                        "The 'key' and 'secret' can be found on the Charles Schwab Api webpage of your app. The rest" +
-                        "of the fields will be filled in after login() is called"
-            )
-            exitProcess(0)
-        }
+        auth = initAuthJson(appKey, appSecret)
         // Check status of Refresh Token
         init_check_refresh_token()
         loadTopStocksList()
+    }
+
+    private fun initAuthJson(key: String, secret: String): Authorization {
+        // Try to load
+        try {
+            val json = FileHelper.readFileToString(authPath)
+            return gson.fromJson(json, Authorization::class.java)
+        } catch (e: Exception) {
+            println("\n#############################################################################################")
+            println("\nWarning -- No Auth File Found. New Auth Created. Please Login.\n")
+            println("#############################################################################################\n")
+            val a = Authorization(
+                key, secret
+            )
+            FileHelper.writeFile(authPath, gson.toJson(a))
+            return a
+        }
     }
 
     /** Checks the status of the Refresh token. Notifies how many days are left until Refresh token expires. */
@@ -91,13 +98,13 @@ class CsApi private constructor(
 //                val daysTilExpiry = DecimalFormat("#.###").format((timeUntilExpiry / 86_400_000))
             val daysTilExpiry = (timeUntilExpiry / (86_400_000).toDouble())
             val printable = DecimalFormat("#.##").format(daysTilExpiry)
-            println("#############################################################################################")
+            println("\n#############################################################################################")
             println("\nWarning -- Refresh Token Expires in: $printable days.\n")
-            println("#############################################################################################")
+            println("#############################################################################################\n")
         } else {
-            println("#############################################################################################")
+            println("\n#############################################################################################")
             println("\nWarning -- Refresh Token is EXPIRED.\nPlease use CSAuth.login() to update.\n")
-            println("#############################################################################################")
+            println("#############################################################################################\n")
         }
     }
 
@@ -193,7 +200,7 @@ class CsApi private constructor(
             auth = updatedAuth
 
             // Save to file
-            FileHelper.writeFile(pathToAuthFile, gson.toJson(updatedAuth))
+            FileHelper.writeFile(authPath, gson.toJson(updatedAuth))
 
         } else {
             throw Exception("Request failed: ${response.code} ${response.message}")
@@ -253,7 +260,7 @@ class CsApi private constructor(
                         auth.refreshTokenExpiryInMs
                     )
                     val js = gson.toJson(newAuth)
-                    FileHelper.writeFile(pathToAuthFile, js)
+                    FileHelper.writeFile(authPath, js)
                     auth = newAuth
                     return auth.access_token
                 }
@@ -306,10 +313,11 @@ class CsApi private constructor(
         try {
             val s = symbol.uppercase()
             val body = getQuote(s)
+            println(body)
             val jsonObject = gson.fromJson(body, Map::class.java)
             val assetJson = gson.toJson(jsonObject[s])
-            val asset = gson.fromJson(assetJson, QuoteResponse::class.java)
-            return asset.convertToQuote()
+            val asset = gson.fromJson(assetJson, StockQuoteResponse::class.java)
+            return asset.toStockQuote()
         } catch (e: Exception) {
             Log.w("getStockQuote()", "Failed Response: ${e.message}")
             return null
@@ -322,7 +330,7 @@ class CsApi private constructor(
             val body = getQuote(s)
             val jsonObject = gson.fromJson(body, Map::class.java)
             val assetJson = gson.toJson(jsonObject[s])
-            val asset = gson.fromJson(assetJson, OptionQuoteResp::class.java).convertToOptionQuote()
+            val asset = gson.fromJson(assetJson, OptionQuoteResp::class.java).toOptionQuote()
             return asset
         }catch (e: Exception) {
             Log.w("getOptionQuote()", "Failed Response: ${e.message}")
@@ -378,9 +386,9 @@ class CsApi private constructor(
                     val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
                     val csf = mutableMapOf<String, Option>()
                     val psf = mutableMapOf<String, Option>()
-                    for (strike in callStrikeMapOrig.keys) {
-                        csf.put(strike, callStrikeMapOrig[strike]!!.first())
-                        psf.put(strike, putStrikeMapOrig[strike]!!.first())
+                    for (s in callStrikeMapOrig.keys) {
+                        csf.put(s, callStrikeMapOrig[s]!!.first())
+                        psf.put(s, putStrikeMapOrig[s]!!.first())
                     }
                     cExpiryMap.put(date, csf)
                     pExpiryMap.put(date, psf)
