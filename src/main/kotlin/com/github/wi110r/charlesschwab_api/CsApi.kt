@@ -65,13 +65,13 @@ class CsApi private constructor(
                         "Please create a JSON file that contains the following key value pairs:\n" +
                         "'key' : 'your app key'\n" +
                         "'secret' : 'your app secret'\n" +
-                        "'accountNumber': ''"  +
-                        "'hashValue': ''" +
-                        "'refresh_token': ''" +
-                        "'access_token': ''" +
-                        "'id_token': ''" +
-                        "'accessTokenExpiryInMs': 0" +
-                        "'accessTokenExpiryInMs': 0" +
+                        "'accountNumber': ''\n"  +
+                        "'hashValue': ''\n" +
+                        "'refresh_token': ''\n" +
+                        "'access_token': ''\n" +
+                        "'id_token': ''\n" +
+                        "'accessTokenExpiryInMs': 0\n" +
+                        "'accessTokenExpiryInMs': 0\n" +
                         "The 'key' and 'secret' can be found on the Charles Schwab Api webpage of your app. The rest" +
                         "of the fields will be filled in after login() is called"
             )
