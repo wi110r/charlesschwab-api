@@ -7,7 +7,7 @@ import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.file.Paths
 
-object FileHelper {
+internal object FileHelper {
 
     fun readFileToString(path: String): String {
         val file = File(path)

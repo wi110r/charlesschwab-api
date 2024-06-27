@@ -2,7 +2,7 @@ package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.response
 
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.OptionQuote
 
-data class OptionQuoteResp(
+internal data class OptionQuoteResp(
     val assetMainType: String?,
     val realtime: Boolean?,
     val ssid: Long?,
@@ -11,7 +11,7 @@ data class OptionQuoteResp(
     val reference: Ref
 )
 
-data class OptionQuoteRespData(
+internal data class OptionQuoteRespData(
     val weekHigh52: Double?,
     val weekLow52: Double?,
     val askPrice: Double?,
@@ -50,7 +50,7 @@ data class OptionQuoteRespData(
     val volatility: Double?
 )
 
-data class Ref(
+internal data class Ref(
     val contractType: String?,
     val daysToExpiration: Int?,
     val deliverables: String?,
@@ -70,44 +70,44 @@ data class Ref(
     val underlying: String?
 )
 
-fun OptionQuoteResp.toOptionQuote(): OptionQuote {
+internal fun OptionQuoteResp.toOptionQuote(): OptionQuote {
     return OptionQuote(
         assetMainType = this.assetMainType ?: "Unknown",
         realtime = this.realtime ?: false,
         ssid = this.ssid ?: 0L,
         symbol = this.symbol ?: "Unknown",
 
-        weekHigh52 = this.quote.weekHigh52 ?: 0.0,
-        weekLow52 = this.quote.weekLow52 ?: 0.0,
-        askPrice = this.quote.askPrice ?: 0.0,
+        weekHigh52 = this.quote.weekHigh52?.times(100.0) ?: 0.0,
+        weekLow52 = this.quote.weekLow52?.times(100.0) ?: 0.0,
+        askPrice = this.quote.askPrice?.times(100.0) ?: 0.0,
         askSize = this.quote.askSize ?: 0,
-        bidPrice = this.quote.bidPrice ?: 0.0,
+        bidPrice = this.quote.bidPrice?.times(100.0) ?: 0.0,
         bidSize = this.quote.bidSize ?: 0,
-        closePrice = this.quote.closePrice ?: 0.0,
+        closePrice = this.quote.closePrice?.times(100.0) ?: 0.0,
         delta = this.quote.delta ?: 0.0,
         gamma = this.quote.gamma ?: 0.0,
-        highPrice = this.quote.highPrice ?: 0.0,
-        indAskPrice = this.quote.indAskPrice ?: 0.0,
-        indBidPrice = this.quote.indBidPrice ?: 0.0,
+        highPrice = this.quote.highPrice?.times(100.0) ?: 0.0,
+        indAskPrice = this.quote.indAskPrice?.times(100.0) ?: 0.0,
+        indBidPrice = this.quote.indBidPrice?.times(100.0) ?: 0.0,
         indQuoteTime = this.quote.indQuoteTime ?: 0L,
         impliedYield = this.quote.impliedYield ?: 0.0,
-        lastPrice = this.quote.lastPrice ?: 0.0,
+        lastPrice = this.quote.lastPrice?.times(100.0) ?: 0.0,
         lastSize = this.quote.lastSize ?: 0,
-        lowPrice = this.quote.lowPrice ?: 0.0,
-        mark = this.quote.mark ?: 0.0,
-        markChange = this.quote.markChange ?: 0.0,
+        lowPrice = this.quote.lowPrice?.times(100.0) ?: 0.0,
+        mark = this.quote.mark?.times(100.0) ?: 0.0,
+        markChange = this.quote.markChange?.times(100.0) ?: 0.0,
         markPercentChange = this.quote.markPercentChange ?: 0.0,
-        moneyIntrinsicValue = this.quote.moneyIntrinsicValue ?: 0.0,
-        netChange = this.quote.netChange ?: 0.0,
+        moneyIntrinsicValue = this.quote.moneyIntrinsicValue?.times(100.0) ?: 0.0,
+        netChange = this.quote.netChange?.times(100.0) ?: 0.0,
         netPercentChange = this.quote.netPercentChange ?: 0.0,
         openInterest = this.quote.openInterest ?: 0,
-        openPrice = this.quote.openPrice ?: 0.0,
+        openPrice = this.quote.openPrice?.times(100.0) ?: 0.0,
         quoteTime = this.quote.quoteTime ?: 0L,
         rho = this.quote.rho ?: 0.0,
         securityStatus = this.quote.securityStatus ?: "Unknown",
-        theoreticalOptionValue = this.quote.theoreticalOptionValue ?: 0.0,
+        theoreticalOptionValue = this.quote.theoreticalOptionValue?.times(100.0) ?: 0.0,
         theta = this.quote.theta ?: 0.0,
-        timeValue = this.quote.timeValue ?: 0.0,
+        timeValue = this.quote.timeValue?.times(100.0) ?: 0.0,
         totalVolume = this.quote.totalVolume ?: 0,
         tradeTime = this.quote.tradeTime ?: 0L,
         underlyingPrice = this.quote.underlyingPrice ?: 0.0,
@@ -134,68 +134,3 @@ fun OptionQuoteResp.toOptionQuote(): OptionQuote {
     )
 }
 
-
-// TODO DELETE ME -- Old with no null conversion
-//fun OptionQuoteResp.convertToOptionQuote(): OptionQuote {
-//    return OptionQuote(
-//        assetMainType = this.assetMainType,
-//        realtime = this.realtime,
-//        ssid = this.ssid,
-//        symbol = this.symbol,
-//
-//        weekHigh52 = this.quote.weekHigh52,
-//        weekLow52 = this.quote.weekLow52,
-//        askPrice = this.quote.askPrice,
-//        askSize = this.quote.askSize,
-//        bidPrice = this.quote.bidPrice,
-//        bidSize = this.quote.bidSize,
-//        closePrice = this.quote.closePrice,
-//        delta = this.quote.delta,
-//        gamma = this.quote.gamma,
-//        highPrice = this.quote.highPrice,
-//        indAskPrice = this.quote.indAskPrice,
-//        indBidPrice = this.quote.indBidPrice,
-//        indQuoteTime = this.quote.indQuoteTime,
-//        impliedYield = this.quote.impliedYield,
-//        lastPrice = this.quote.lastPrice,
-//        lastSize = this.quote.lastSize,
-//        lowPrice = this.quote.lowPrice,
-//        mark = this.quote.mark,
-//        markChange = this.quote.markChange,
-//        markPercentChange = this.quote.markPercentChange,
-//        moneyIntrinsicValue = this.quote.moneyIntrinsicValue,
-//        netChange = this.quote.netChange,
-//        netPercentChange = this.quote.netPercentChange,
-//        openInterest = this.quote.openInterest,
-//        openPrice = this.quote.openPrice,
-//        quoteTime = this.quote.quoteTime,
-//        rho = this.quote.rho,
-//        securityStatus = this.quote.securityStatus,
-//        theoreticalOptionValue = this.quote.theoreticalOptionValue,
-//        theta = this.quote.theta,
-//        timeValue = this.quote.timeValue,
-//        totalVolume = this.quote.totalVolume,
-//        tradeTime = this.quote.tradeTime,
-//        underlyingPrice = this.quote.underlyingPrice,
-//        vega = this.quote.vega,
-//        volatility = this.quote.volatility,
-//
-//        contractType = this.reference.contractType,
-//        daysToExpiration = this.reference.daysToExpiration,
-//        deliverables = this.reference.deliverables,
-//        description = this.reference.description,
-//        exchange = this.reference.exchange,
-//        exchangeName = this.reference.exchangeName,
-//        exerciseType = this.reference.exerciseType,
-//        expirationDay = this.reference.expirationDay,
-//        expirationMonth = this.reference.expirationMonth,
-//        expirationType = this.reference.expirationType,
-//        expirationYear = this.reference.expirationYear,
-//        isPennyPilot = this.reference.isPennyPilot,
-//        lastTradingDay = this.reference.lastTradingDay,
-//        multiplier = this.reference.multiplier,
-//        settlementType = this.reference.settlementType,
-//        strikePrice = this.reference.strikePrice,
-//        underlying = this.reference.underlying
-//    )
-//}

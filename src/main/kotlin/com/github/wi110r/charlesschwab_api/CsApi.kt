@@ -16,7 +16,6 @@ import okhttp3.FormBody
 import okhttp3.Request
 import java.text.DecimalFormat
 import java.util.*
-import java.util.concurrent.Callable
 import kotlin.system.exitProcess
 
 
@@ -34,12 +33,12 @@ class CsApi private constructor(
     private val authPath: String
 
     companion object {
-        @Volatile private var api: CsApi? = null
+        @Volatile private var instance: CsApi? = null
         private var path: String? = null
 
-        fun getApi(): CsApi {
-            if (api != null) {
-                return api!!
+        fun getInstance(): CsApi {
+            if (instance != null) {
+                return instance!!
             }
             else {
                 println("CsApi() Has not been built yet. Please provide path to Auth Json file.")
@@ -52,12 +51,12 @@ class CsApi private constructor(
             appSecret: String,
             savePath: String
         ): CsApi {
-            if (api == null){
-                api = CsApi(appKey, appSecret, savePath)
-                return api!!
+            if (instance == null){
+                instance = CsApi(appKey, appSecret, savePath)
+                return instance!!
             } else {
                 println("CsApi() Has already been built with Auth JSON Path set to: $path")
-                return api!!
+                return instance!!
             }
         }
     }
@@ -271,8 +270,9 @@ class CsApi private constructor(
                     return null
                 }
             } catch (e: Exception){
+                Log.w("getAccessToken()", "Failed Response: ${e.message}")
+                e.printStackTrace()
                 return null
-
             }
         }
     }
@@ -282,7 +282,7 @@ class CsApi private constructor(
     //    Market Data Start
 
     fun getTopStocks(): TopStockLists {
-        return topStockLists!!
+        return topStockLists
     }
 
     private fun getQuote(symbol: String): String? {
@@ -381,21 +381,25 @@ class CsApi private constructor(
             if (resp.isSuccessful) {
                 val body = resp.body?.string()
                 val ocr = gson.fromJson(body, OptionChainResponse::class.java)
-                val cExpiryMap = mutableMapOf<String, Map<String, Option>>()
-                val pExpiryMap = mutableMapOf<String, Map<String, Option>>()
-                for (date in ocr.callExpDateMap.keys){
-                    val callStrikeMapOrig = ocr.callExpDateMap.get(date)!!
-                    val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
-                    val csf = mutableMapOf<String, Option>()
-                    val psf = mutableMapOf<String, Option>()
-                    for (s in callStrikeMapOrig.keys) {
-                        csf.put(s, callStrikeMapOrig[s]!!.first())
-                        psf.put(s, putStrikeMapOrig[s]!!.first())
-                    }
-                    cExpiryMap.put(date, csf)
-                    pExpiryMap.put(date, psf)
-                }
-                return ocr.convertToOptionChain(cExpiryMap, pExpiryMap)
+                val n = ocr.convertToOptionChain()
+                return n
+
+                // TODO DELETE ME
+//                val cExpiryMap = mutableMapOf<String, Map<String, Option>>()
+//                val pExpiryMap = mutableMapOf<String, Map<String, Option>>()
+//                for (date in ocr.callExpDateMap.keys){
+//                    val callStrikeMapOrig = ocr.callExpDateMap.get(date)!!
+//                    val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
+//                    val csf = mutableMapOf<String, Option>()
+//                    val psf = mutableMapOf<String, Option>()
+//                    for (s in callStrikeMapOrig.keys) {
+//                        csf.put(s, callStrikeMapOrig[s]!!.first())
+//                        psf.put(s, putStrikeMapOrig[s]!!.first())
+//                    }
+//                    cExpiryMap.put(date, csf)
+//                    pExpiryMap.put(date, psf)
+//                }
+//                return ocr.convertToOptionChain()
             }
             else {
                 Log.w("getOptionChain", "Request Failed, MSG:\t" + resp.body?.string())
@@ -408,52 +412,52 @@ class CsApi private constructor(
     }
 
 
-    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
-
-        try {
-            val today = System.currentTimeMillis()
-            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
-
-            val targets = (topStockLists.etfTop25 + topStockLists.sp100 + topStockLists.nasdaq100).toSet()
-            val failed = mutableListOf<String>()
-            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
-            // Build tasks
-            for (t in targets){
-                val callable = Callable {
-                    try {
-                        val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
-                        if (chainResp == null) {
-                            failed.add(t)
-                            println(t + " FAILED. NULL RESPONSE")
-                            return@Callable Pair(t, 0)
-                        }
-                        var totalVol = 0
-                        val expDate = chainResp!!.callExpDateMap.keys.first()
-                        val callStrikeMap = chainResp.callExpDateMap[expDate]!!
-                        val putStrikeMap = chainResp.putExpDateMap[expDate]!!
-                        for (s in callStrikeMap!!.keys) {
-                            totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
-                        }
-                        return@Callable Pair(t, totalVol)
-
-                    } catch (e: Exception) {
-                        println("$t Failed")
-                        return@Callable Pair(t, 0)
-                    }
-                }
-                callableTaskList.add(callable)
-            }
-
-            val results = threadPoolHandler(callableTaskList)
-                .filterNotNull()
-                .sortedByDescending { it.second }
-                .take(returnListSize)
-            return results
-        } catch (e: Exception){
-            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
-            return null
-        }
-    }
+//    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
+//
+//        try {
+//            val today = System.currentTimeMillis()
+//            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
+//
+//            val targets = (topStockLists.etfTop25 + topStockLists.sp100 + topStockLists.nasdaq100).toSet()
+//            val failed = mutableListOf<String>()
+//            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
+//            // Build tasks
+//            for (t in targets){
+//                val callable = Callable {
+//                    try {
+//                        val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
+//                        if (chainResp == null) {
+//                            failed.add(t)
+//                            println(t + " FAILED. NULL RESPONSE")
+//                            return@Callable Pair(t, 0)
+//                        }
+//                        var totalVol = 0
+//                        val expDate = chainResp!!.callExpDateMap.keys.first()
+//                        val callStrikeMap = chainResp.callExpDateMap[expDate]!!
+//                        val putStrikeMap = chainResp.putExpDateMap[expDate]!!
+//                        for (s in callStrikeMap!!.keys) {
+//                            totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
+//                        }
+//                        return@Callable Pair(t, totalVol)
+//
+//                    } catch (e: Exception) {
+//                        println("$t Failed")
+//                        return@Callable Pair(t, 0)
+//                    }
+//                }
+//                callableTaskList.add(callable)
+//            }
+//
+//            val results = threadPoolHandler(callableTaskList)
+//                .filterNotNull()
+//                .sortedByDescending { it.second }
+//                .take(returnListSize)
+//            return results
+//        } catch (e: Exception){
+//            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
+//            return null
+//        }
+//    }
 
 
     fun getHistoricData(

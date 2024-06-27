@@ -5,7 +5,7 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchar
 import java.util.*
 
 
-data class ChartResponse(
+internal data class ChartResponse(
     val symbol: String,
     val empty: Boolean,
     val previousClose: Double,
@@ -13,7 +13,7 @@ data class ChartResponse(
     val candles: List<CandleResponse>
 )
 
-data class CandleResponse(
+internal data class CandleResponse(
     val open: Double,
     val high: Double,
     val low: Double,
@@ -22,7 +22,7 @@ data class CandleResponse(
     val datetime: Long
 )
 
-fun ChartResponse.convertToStockChart(timeInterval: String, periodRange: String): StockChart {
+internal fun ChartResponse.convertToStockChart(timeInterval: String, periodRange: String): StockChart {
     val datetime = this.candles.map { Date(it.datetime) }
     val timestamp = this.candles.map { it.datetime } // Assuming you want to convert to Int
 

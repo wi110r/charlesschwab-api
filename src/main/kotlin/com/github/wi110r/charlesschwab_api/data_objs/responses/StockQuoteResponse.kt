@@ -3,7 +3,7 @@ package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.response
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.StockQuote
 import com.google.gson.annotations.SerializedName
 
-data class StockQuoteResponse(
+internal data class StockQuoteResponse(
     @SerializedName("assetMainType") val assetMainType: String?,
     @SerializedName("assetSubType") val assetSubType: String?,
     @SerializedName("quoteType") val quoteType: String?,
@@ -16,7 +16,7 @@ data class StockQuoteResponse(
     @SerializedName("regular") val regular: MinimumData
 )
 
-data class Fundamental(
+internal data class Fundamental(
     @SerializedName("avg10DaysVolume") val avg10DaysVolume: Long?,
     @SerializedName("avg1YearVolume") val avg1YearVolume: Long?,
     @SerializedName("divAmount") val divAmount: Double?,
@@ -29,7 +29,7 @@ data class Fundamental(
     @SerializedName("peRatio") val peRatio: Double?
 )
 
-data class BasicData(
+internal data class BasicData(
     @SerializedName("52WeekHigh") val week52High: Double?,
     @SerializedName("52WeekLow") val week52Low: Double?,
     @SerializedName("askMICId") val askMICId: String?,
@@ -60,7 +60,7 @@ data class BasicData(
     @SerializedName("tradeTime") val tradeTime: Long?
 )
 
-data class Reference(
+internal data class Reference(
     @SerializedName("cusip") val cusip: String?,
     @SerializedName("description") val description: String?,
     @SerializedName("exchange") val exchange: String?,
@@ -70,7 +70,7 @@ data class Reference(
     @SerializedName("htbRate") val htbRate: Double?
 )
 
-data class MinimumData(
+internal data class MinimumData(
     @SerializedName("regularMarketLastPrice") val regularMarketLastPrice: Double?,
     @SerializedName("regularMarketLastSize") val regularMarketLastSize: Long?,
     @SerializedName("regularMarketNetChange") val regularMarketNetChange: Double?,
@@ -78,7 +78,7 @@ data class MinimumData(
     @SerializedName("regularMarketTradeTime") val regularMarketTradeTime: Long?
 )
 
-fun StockQuoteResponse.toStockQuote(): StockQuote {
+internal fun StockQuoteResponse.toStockQuote(): StockQuote {
     return StockQuote(
         assetMainType = this.assetMainType ?: "Unknown",
         assetSubType = this.assetSubType ?: "Unknown",
@@ -142,69 +142,3 @@ fun StockQuoteResponse.toStockQuote(): StockQuote {
         regularMarketTradeTime = this.regular.regularMarketTradeTime ?: 0L
     )
 }
-
-// TODO DELETE ME -- Old with no null conversion
-//fun QuoteResponse.convertToQuote(): StockQuote {
-//    return StockQuote(
-//        assetMainType = this.assetMainType,
-//        assetSubType = this.assetSubType,
-//        quoteType = this.quoteType,
-//        realtime = this.realtime,
-//        ssid = this.ssid,
-//        symbol = this.symbol,
-//
-//        avg10DaysVolume = this.fundamental.avg10DaysVolume,
-//        avg1YearVolume = this.fundamental.avg1YearVolume,
-//        divAmount = this.fundamental.divAmount,
-//        divFreq = this.fundamental.divFreq,
-//        divPayAmount = this.fundamental.divPayAmount,
-//        divYield = this.fundamental.divYield,
-//        eps = this.fundamental.eps,
-//        fundLeverageFactor = this.fundamental.fundLeverageFactor,
-//        lastEarningsDate = this.fundamental.lastEarningsDate,
-//        peRatio = this.fundamental.peRatio,
-//
-//        week52High = this.basicData.week52High,
-//        week52Low = this.basicData.week52Low,
-//        askMICId = this.basicData.askMICId,
-//        askPrice = this.basicData.askPrice,
-//        askSize = this.basicData.askSize,
-//        askTime = this.basicData.askTime,
-//        bidMICId = this.basicData.bidMICId,
-//        bidPrice = this.basicData.bidPrice,
-//        bidSize = this.basicData.bidSize,
-//        bidTime = this.basicData.bidTime,
-//        closePrice = this.basicData.closePrice,
-//        highPrice = this.basicData.highPrice,
-//        lastMICId = this.basicData.lastMICId,
-//        lastPrice = this.basicData.lastPrice,
-//        lastSize = this.basicData.lastSize,
-//        lowPrice = this.basicData.lowPrice,
-//        mark = this.basicData.mark,
-//        markChange = this.basicData.markChange,
-//        markPercentChange = this.basicData.markPercentChange,
-//        netChange = this.basicData.netChange,
-//        netPercentChange = this.basicData.netPercentChange,
-//        openPrice = this.basicData.openPrice,
-//        postMarketChange = this.basicData.postMarketChange,
-//        postMarketPercentChange = this.basicData.postMarketPercentChange,
-//        quoteTime = this.basicData.quoteTime,
-//        securityStatus = this.basicData.securityStatus,
-//        totalVolume = this.basicData.totalVolume,
-//        tradeTime = this.basicData.tradeTime,
-//
-//        cusip = this.reference.cusip,
-//        description = this.reference.description,
-//        exchange = this.reference.exchange,
-//        exchangeName = this.reference.exchangeName,
-//        isHardToBorrow = this.reference.isHardToBorrow,
-//        isShortable = this.reference.isShortable,
-//        htbRate = this.reference.htbRate,
-//
-//        regularMarketLastPrice = this.regular.regularMarketLastPrice,
-//        regularMarketLastSize = this.regular.regularMarketLastSize,
-//        regularMarketNetChange = this.regular.regularMarketNetChange,
-//        regularMarketPercentChange = this.regular.regularMarketPercentChange,
-//        regularMarketTradeTime = this.regular.regularMarketTradeTime
-//    )
-//}

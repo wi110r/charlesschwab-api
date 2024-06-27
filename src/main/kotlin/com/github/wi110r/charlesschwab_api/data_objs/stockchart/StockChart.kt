@@ -17,4 +17,12 @@ data class StockChart(
     val candles: List<Candle>
 )
 
-
+data class Candle(
+    val dateTime: Date,
+    val timestamp: Long,
+    val open: Double,
+    val high: Double,
+    val low: Double,
+    val close: Double,
+    val volume: Int
+)
