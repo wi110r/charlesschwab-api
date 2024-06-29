@@ -403,9 +403,6 @@ class CsApi private constructor(
     }
 
 
-
-
-
     private fun getHistoricData(
         symbol: String,
         periodType: String = "day",     // day, month, year, ytd
@@ -597,12 +594,6 @@ class CsApi private constructor(
         }
     }
 
-
-    fun test() {
-        val x = getHistoricData("SPY")
-        println(x?.periodSize)
-        println(x?.candleSize)
-    }
 
     companion object {
         @Volatile private var instance: CsApi? = null
