@@ -19,7 +19,7 @@ import java.util.*
 import kotlin.system.exitProcess
 
 
-class CsApi private constructor(
+class CharlesSchwabApi private constructor(
     appKey: String,
     appSecret: String,
     authSavePath: String? = null,
@@ -182,7 +182,7 @@ class CsApi private constructor(
             FileHelper.writeFile(authPath, gson.toJson(updatedAuth))
 
         } else {
-            Log.w("${CsApi::class.java.simpleName}.login()", "Login Failed.")
+            Log.w("${CharlesSchwabApi::class.java.simpleName}.login()", "Login Failed.")
             throw Exception("Request failed: ${response.code}\n${response.message} \n${response.body?.string()}")
         }
 
@@ -596,10 +596,10 @@ class CsApi private constructor(
 
 
     companion object {
-        @Volatile private var instance: CsApi? = null
+        @Volatile private var instance: CharlesSchwabApi? = null
         private var path: String? = null
 
-        fun getInstance(): CsApi {
+        fun getInstance(): CharlesSchwabApi {
             if (instance != null) {
                 return instance!!
             }
@@ -614,9 +614,9 @@ class CsApi private constructor(
             appKey: String,
             appSecret: String,
             savePath: String? = null
-        ): CsApi {
+        ): CharlesSchwabApi {
             if (instance == null){
-                instance = CsApi(appKey, appSecret, savePath)
+                instance = CharlesSchwabApi(appKey, appSecret, savePath)
                 return instance!!
             } else {
                 println("CsApi() Has already been built with Auth JSON Path set to: $path")
