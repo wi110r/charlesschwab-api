@@ -32,34 +32,9 @@ class CsApi private constructor(
     private val auth_base_endpoint = "https://api.schwabapi.com/v1/oauth"
     private val authPath: String
 
-    companion object {
-        @Volatile private var instance: CsApi? = null
-        private var path: String? = null
 
-        fun getInstance(): CsApi {
-            if (instance != null) {
-                return instance!!
-            }
-            else {
-                println("CsApi() Has not been built yet. Please provide path to Auth Json file.")
-                exitProcess(0)
-            }
-        }
 
-        fun buildApi(
-            appKey: String,
-            appSecret: String,
-            savePath: String
-        ): CsApi {
-            if (instance == null){
-                instance = CsApi(appKey, appSecret, savePath)
-                return instance!!
-            } else {
-                println("CsApi() Has already been built with Auth JSON Path set to: $path")
-                return instance!!
-            }
-        }
-    }
+
 
     init {
 
@@ -70,6 +45,7 @@ class CsApi private constructor(
         init_check_refresh_token()
         loadTopStocksList()
     }
+
 
     private fun initAuthJson(key: String, secret: String): Authorization {
         // Try to load
@@ -87,6 +63,7 @@ class CsApi private constructor(
             return a
         }
     }
+
 
     /** Checks the status of the Refresh token. Notifies how many days are left until Refresh token expires. */
     private fun init_check_refresh_token() {
@@ -106,6 +83,7 @@ class CsApi private constructor(
             println("#############################################################################################\n")
         }
     }
+
 
     private fun loadTopStocksList() {
 //        val l = FileHelper.readFileToString("src/main/resources/top_stock_lists.json")
@@ -204,10 +182,12 @@ class CsApi private constructor(
             FileHelper.writeFile(authPath, gson.toJson(updatedAuth))
 
         } else {
-            throw Exception("Request failed: ${response.code} ${response.message}")
+            Log.w("${CsApi::class.java.simpleName}.login()", "Login Failed.")
+            throw Exception("Request failed: ${response.code}\n${response.message} \n${response.body?.string()}")
         }
 
     }
+
 
     /** Returns Access Token. Will update the Access token if needed using a valid Refresh token */
     private fun getAccessToken(): String? {
@@ -281,9 +261,11 @@ class CsApi private constructor(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //    Market Data Start
 
+
     fun getTopStocks(): TopStockLists {
         return topStockLists
     }
+
 
     private fun getQuote(symbol: String): String? {
 
@@ -311,6 +293,7 @@ class CsApi private constructor(
         }
     }
 
+
     fun getStockQuote(symbol: String): StockQuote? {
         try {
             val s = symbol.uppercase()
@@ -326,6 +309,10 @@ class CsApi private constructor(
         }
     }
 
+
+    /** Gets quote for option symbol.
+     * Note: All prices are x100
+     * */
     fun getOptionQuote(symbol: String): OptionQuote? {
         try {
             val s = symbol.uppercase()
@@ -340,6 +327,10 @@ class CsApi private constructor(
         }
     }
 
+
+    /** Gets option chain for symbol.
+     * Note: All prices are x100
+     * */
     fun getOptionChain(
         symbol: String,
         contractType: String? = "ALL",
@@ -536,10 +527,41 @@ class CsApi private constructor(
         }
     }
 
+
     fun test() {
         val x = getHistoricData("SPY")
         println(x?.periodSize)
         println(x?.candleSize)
+    }
+
+    companion object {
+        @Volatile private var instance: CsApi? = null
+        private var path: String? = null
+
+        fun getInstance(): CsApi {
+            if (instance != null) {
+                return instance!!
+            }
+            else {
+                println("CsApi() Has not been built yet. Please call CsApi.buildApi() with " +
+                        "App-Key & App-Secret.")
+                exitProcess(0)
+            }
+        }
+
+        fun buildApi(
+            appKey: String,
+            appSecret: String,
+            savePath: String? = null
+        ): CsApi {
+            if (instance == null){
+                instance = CsApi(appKey, appSecret, savePath)
+                return instance!!
+            } else {
+                println("CsApi() Has already been built with Auth JSON Path set to: $path")
+                return instance!!
+            }
+        }
     }
 }
 
