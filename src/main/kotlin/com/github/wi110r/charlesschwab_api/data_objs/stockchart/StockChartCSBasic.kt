@@ -2,7 +2,7 @@ package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockcha
 
 import java.util.*
 
-data class StockChart(
+data class StockChartCSBasic(
     val ticker: String,
     val candleSize: String,
     val periodSize: String,

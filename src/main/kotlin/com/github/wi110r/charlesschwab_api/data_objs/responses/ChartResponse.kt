@@ -1,7 +1,7 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses
 
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.Candle
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChart
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChartCSBasic
 import java.util.*
 
 
@@ -22,11 +22,11 @@ internal data class CandleResponse(
     val datetime: Long
 )
 
-internal fun ChartResponse.convertToStockChart(timeInterval: String, periodRange: String): StockChart {
+internal fun ChartResponse.convertToStockChart(timeInterval: String, periodRange: String): StockChartCSBasic {
     val datetime = this.candles.map { Date(it.datetime) }
     val timestamp = this.candles.map { it.datetime } // Assuming you want to convert to Int
 
-    return StockChart(
+    return StockChartCSBasic(
         ticker = this.symbol,
         candleSize = timeInterval,  // Assuming a default interval, modify as needed
         periodSize = periodRange,  // Assuming a default period range, modify as needed

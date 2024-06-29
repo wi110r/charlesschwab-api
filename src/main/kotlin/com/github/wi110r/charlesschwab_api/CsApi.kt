@@ -9,7 +9,7 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.StockQuot
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.TopStockLists
 import com.github.wi110r.charlesschwab_api.data_objs.responses.AccountNumbersResponse
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.responses.*
-import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChart
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.data_objs.stockchart.StockChartCSBasic
 import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.*
 import com.google.gson.reflect.TypeToken
 import okhttp3.FormBody
@@ -403,55 +403,10 @@ class CsApi private constructor(
     }
 
 
-//    fun getTopOptionVolumeTickers(returnListSize: Int = 10, weeksToLookAhead: Int = 4): List<Pair<String, Int>>? {
-//
-//        try {
-//            val today = System.currentTimeMillis()
-//            val weeksLater = today + (604_800_000L * weeksToLookAhead.toLong())     // 1 month... Only first expiry date is used
-//
-//            val targets = (topStockLists.etfTop25 + topStockLists.sp100 + topStockLists.nasdaq100).toSet()
-//            val failed = mutableListOf<String>()
-//            val callableTaskList = mutableListOf<Callable<Pair<String, Int>?>>()
-//            // Build tasks
-//            for (t in targets){
-//                val callable = Callable {
-//                    try {
-//                        val chainResp = getOptionChain(t, fromDate = today, toDate = weeksLater)
-//                        if (chainResp == null) {
-//                            failed.add(t)
-//                            println(t + " FAILED. NULL RESPONSE")
-//                            return@Callable Pair(t, 0)
-//                        }
-//                        var totalVol = 0
-//                        val expDate = chainResp!!.callExpDateMap.keys.first()
-//                        val callStrikeMap = chainResp.callExpDateMap[expDate]!!
-//                        val putStrikeMap = chainResp.putExpDateMap[expDate]!!
-//                        for (s in callStrikeMap!!.keys) {
-//                            totalVol += callStrikeMap[s]!!.totalVolume + putStrikeMap[s]!!.totalVolume
-//                        }
-//                        return@Callable Pair(t, totalVol)
-//
-//                    } catch (e: Exception) {
-//                        println("$t Failed")
-//                        return@Callable Pair(t, 0)
-//                    }
-//                }
-//                callableTaskList.add(callable)
-//            }
-//
-//            val results = threadPoolHandler(callableTaskList)
-//                .filterNotNull()
-//                .sortedByDescending { it.second }
-//                .take(returnListSize)
-//            return results
-//        } catch (e: Exception){
-//            Log.w("getTopOptionVolumeTickers()", "Failed Response: ${e.message}")
-//            return null
-//        }
-//    }
 
 
-    fun getHistoricData(
+
+    private fun getHistoricData(
         symbol: String,
         periodType: String = "day",     // day, month, year, ytd
         period: Int = 10,
@@ -461,7 +416,7 @@ class CsApi private constructor(
         endDate: Long? = null,
         needExtendedHoursData: Boolean = true
 
-    ): StockChart? {
+    ): StockChartCSBasic? {
         try {
 
             val endpoint = market_data_base_endpoint + "/pricehistory"
@@ -500,6 +455,121 @@ class CsApi private constructor(
             Log.w("getHistoricData()", "Failed Response. Null")
         }
         return null
+    }
+
+
+    /** Fetch a current Stock Chart with 1 minute candles.
+     * First candle of day is 9:30am.
+     * @param symbol Stock Symbol.
+     * @param days Valid values are 1, 2, 3, 4, 5, 10.
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData1min(symbol: String, days: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "day",
+            period = days,
+            frequencyType = "minute",
+            frequency = 1,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+            )
+    }
+
+
+    /** Fetch a current Stock Chart with 5 minute candles.
+     * First candle of day is 9:30am.
+     * @param symbol Stock Symbol.
+     * @param days Valid values are 1, 2, 3, 4, 5, 10.
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData5min(symbol: String, days: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "day",
+            period = days,
+            frequencyType = "minute",
+            frequency = 5,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+        )
+    }
+
+
+    /** Fetch a current Stock Chart with 15 minute candles.
+     * First candle of day is 9:30am.
+     * @param symbol Stock Symbol.
+     * @param days Valid values are 1, 2, 3, 4, 5, 10.
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData15min(symbol: String, days: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "day",
+            period = days,
+            frequencyType = "minute",
+            frequency = 15,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+
+        )
+    }
+
+
+    /** Fetch a current Stock Chart with 30 minute candles.
+     * First candle of day is 9:30am.
+     * @param symbol Stock Symbol.
+     * @param days  Valid values are 1, 2, 3, 4, 5, 10.
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData30min(symbol: String, days: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "day",
+            period = days,
+            frequencyType = "minute",
+            frequency = 30,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+        )
+    }
+
+
+    /** Fetch a current Stock Chart with 1 day candles.
+     * First candle of day is 1:00am.
+     * @param symbol Stock Symbol.
+     * @param months Valid values are 1, 2, 3, 6.
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData1day(symbol: String, months: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "month",
+            period = months,
+            frequencyType = "daily",
+            frequency = 1,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+        )
+    }
+
+
+    /** Fetch a current Stock Chart with 1 week candles.
+     * First candle of day is 1:00am.
+     * @param symbol Stock Symbol aka. Ticker.
+     * @param years Valid values are 1, 2, 3, 5, 10
+     * @param prepost Include extended hours.
+     * */
+    fun getHistoricData1week(symbol: String, years: Int, prepost: Boolean): StockChartCSBasic? {
+        return getHistoricData(
+            symbol = symbol,
+            periodType = "year",
+            period = years,
+            frequencyType = "weekly",
+            frequency = 1,
+            endDate = System.currentTimeMillis(),
+            needExtendedHoursData = prepost
+        )
     }
 
 
