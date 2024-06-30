@@ -298,7 +298,6 @@ class CharlesSchwabApi private constructor(
         try {
             val s = symbol.uppercase()
             val body = getQuote(s)
-            println(body)
             val jsonObject = gson.fromJson(body, Map::class.java)
             val assetJson = gson.toJson(jsonObject[s])
             val asset = gson.fromJson(assetJson, StockQuoteResponse::class.java)
@@ -374,23 +373,6 @@ class CharlesSchwabApi private constructor(
                 val ocr = gson.fromJson(body, OptionChainResponse::class.java)
                 val n = ocr.convertToOptionChain()
                 return n
-
-                // TODO DELETE ME
-//                val cExpiryMap = mutableMapOf<String, Map<String, Option>>()
-//                val pExpiryMap = mutableMapOf<String, Map<String, Option>>()
-//                for (date in ocr.callExpDateMap.keys){
-//                    val callStrikeMapOrig = ocr.callExpDateMap.get(date)!!
-//                    val putStrikeMapOrig = ocr.putExpDateMap.get(date)!!
-//                    val csf = mutableMapOf<String, Option>()
-//                    val psf = mutableMapOf<String, Option>()
-//                    for (s in callStrikeMapOrig.keys) {
-//                        csf.put(s, callStrikeMapOrig[s]!!.first())
-//                        psf.put(s, putStrikeMapOrig[s]!!.first())
-//                    }
-//                    cExpiryMap.put(date, csf)
-//                    pExpiryMap.put(date, psf)
-//                }
-//                return ocr.convertToOptionChain()
             }
             else {
                 Log.w("getOptionChain", "Request Failed, MSG:\t" + resp.body?.string())
