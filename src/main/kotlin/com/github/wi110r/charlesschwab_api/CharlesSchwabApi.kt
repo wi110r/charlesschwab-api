@@ -293,6 +293,73 @@ class CharlesSchwabApi private constructor(
         }
     }
 
+    // TODO Make private
+    private fun getMultiQuote(symbols: List<String>): String? {
+        try {
+            val sList = symbols.map {it.uppercase()}
+            val token = getAccessToken()
+            val params = mutableListOf<String>()
+            params.add("symbols" + "=" + sList.joinToString(","))
+            params.add("indicative=false")
+            val req = Request.Builder()
+                .header("Authorization", "Bearer $token")
+                .header("accept", "application/json")
+                .get()
+                .url(market_data_base_endpoint + "/quotes" + "?${params.joinToString("&")}")
+                .build()
+            val resp = NetworkClient.getClient().newCall(req).execute()
+            if (resp.isSuccessful) {
+                return resp.body?.string()
+            } else {
+                Log.w("getQuote()", "Response not Successful. Code: ${resp.code}. Message: ${resp.message}\n" +
+                        "Body: ${resp.body}")
+                return null
+            }
+        } catch (e: Exception){
+            Log.w("getQuote()", "Failed Response. ${e.message}")
+            return null
+        }
+    }
+
+
+    fun getMultiOptionQuote(symbols: List<String>): Map<String, OptionQuote>? {
+        try {
+            val body = getMultiQuote(symbols) ?: return null
+            val jsonObj = gson.fromJson(body, Map::class.java)
+            val quoteMap = mutableMapOf<String, OptionQuote>()
+            for(k in jsonObj.keys) {
+                val rawQuote = jsonObj[k]
+                val quoteJson = gson.toJson(rawQuote)
+                val quote = gson.fromJson(quoteJson, OptionQuoteResp::class.java).toOptionQuote()
+                quoteMap.put(k.toString(), quote)
+            }
+
+            return quoteMap
+        } catch (e: Exception){
+            Log.w("getMultiOptionQuote()", "Failed Response, Exception: ${e.message}\n${e.stackTrace}")
+            return null
+        }
+    }
+
+
+    fun getMultiStockQuote(symbols: List<String>): Map<String, StockQuote>? {
+        try {
+            val body = getMultiQuote(symbols) ?: return null
+            val jsonObj = gson.fromJson(body, Map::class.java)
+            val quoteMap = mutableMapOf<String, StockQuote>()
+            for(k in jsonObj.keys) {
+                val rawQuote = jsonObj[k]
+                val quoteJson = gson.toJson(rawQuote)
+                val quote = gson.fromJson(quoteJson, StockQuoteResponse::class.java).toStockQuote()
+                quoteMap.put(k.toString(), quote)
+            }
+            return quoteMap
+        } catch (e: Exception){
+            Log.w("getMultiStockQuote()", "Failed Response, Exception: ${e.message}\n${e.stackTrace}")
+            return null
+        }
+    }
+
 
     fun getStockQuote(symbol: String): StockQuote? {
         try {

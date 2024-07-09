@@ -70,6 +70,12 @@ internal data class Ref(
     val underlying: String?
 )
 
+
+/** Converts OptionQuoteResp to OptionQuote.
+ *
+ * Main differences is that the Resp may contain null values AND
+ * OptionQuote has all dollar values multiplied by 100. This
+ * function provides default values so that all OptionQuote values are non-null.*/
 internal fun OptionQuoteResp.toOptionQuote(): OptionQuote {
     return OptionQuote(
         assetMainType = this.assetMainType ?: "Unknown",

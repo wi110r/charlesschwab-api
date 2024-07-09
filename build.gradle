@@ -11,7 +11,8 @@ repositories {
 
 dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
-    implementation("com.squareup.okhttp3:okhttp:4.9.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2")
     implementation("com.google.code.gson:gson:2.10.1")
 }
@@ -28,7 +29,7 @@ publishing {
         maven(MavenPublication) {
             groupId 'com.github.wi110r'
             artifactId 'charlesschwab-api'
-            version '1.0'
+            version '1.1'
             from components.java
         }
     }

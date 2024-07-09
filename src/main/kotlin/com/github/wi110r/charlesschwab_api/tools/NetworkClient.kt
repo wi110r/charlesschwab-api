@@ -1,18 +1,17 @@
 package com.github.wi110r.com.github.wi110r.charlesschwab_api.tools
 
-import okhttp3.Interceptor
+import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import java.util.concurrent.TimeUnit
+import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.Log as log
 
 
 internal object NetworkClient {
 
     private var client: OkHttpClient? = null
-
+    private var maxRetries = 60     // Sleeps 1second each retry
 
     /**
      * Returns the Singleton Instance of OkHttpclient
@@ -31,8 +30,8 @@ internal object NetworkClient {
      */
     private fun buildClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .connectTimeout(10_000, TimeUnit.MILLISECONDS)
-//            .addInterceptor(createRetryInterceptor())
+            .connectTimeout(5_000, TimeUnit.MILLISECONDS)
+            .addInterceptor(createRetryInterceptor())
             .retryOnConnectionFailure(true)
             .followRedirects(true)      // VERY IMPORTANT FOR ANDROID
             .followSslRedirects(true)       // ALSO MAYBE
@@ -75,12 +74,11 @@ internal object NetworkClient {
      */
     private fun createRetryInterceptor(): Interceptor {
         var retryCount = 0
-        val maxRetries = 60
 
         return object : Interceptor {
             override fun intercept(chain: Interceptor.Chain): Response {
                 val request: Request = chain.request()
-                var response: Response? = null
+                var response: Response?
 
                 while (retryCount <= maxRetries) {
                     try {
@@ -91,23 +89,39 @@ internal object NetworkClient {
                             return response
                         } else {
                             retryCount++
-                            Thread.sleep(500)
-                            println("NetworkClient() -- RETRY INTERCEPTOR TRIGGERED! -- No Exception\n\n" +
-                                    "Retry Count: $retryCount | Max: $maxRetries")
+                            Thread.sleep(1000)
+                            log.w("charlesschwab-api.NetworkClient",
+                                "-- RETRY INTERCEPTOR TRIGGERED -- Response Code: ${response.code} " +
+                                        "Msg: ${response.message} " +
+                                        "Retry Count: $retryCount | Max Retries: $maxRetries")
                         }
                     } catch (e: Exception) {
                         // Retry the request
                         retryCount++
-                        Thread.sleep(500)
-                        println("NetworkClient() -- RETRY INTERCEPTOR TRIGGERED! -- Exception: ${e.message}\n\n" +
-                                "Retry Count: $retryCount | Max: $maxRetries")
+                        Thread.sleep(1000)
+                        log.w("charlesschwab-api.NetworkClient","-- RETRY INTERCEPTOR TRIGGERED --" +
+                                "Retry Count: $retryCount | Max: $maxRetries Exception: ${e.message} \n" +
+                                "${e.stackTrace}")
                     }
                 }
-
-                // Return the last response, even if unsuccessful
-                return response ?: throw IllegalStateException("No response received. Max Retries Reached!")
+                // Return the generic response if max retries reached
+                return makeGenericResponse(request)
             }
         }
+    }
+
+
+    private fun makeGenericResponse(request: Request): Response {
+        return Response.Builder()
+            .request(request)
+            .protocol(okhttp3.Protocol.HTTP_1_1)
+            .code(500) // Generic error code
+            .message(
+                "charlesschwab-api.NetworkClient RetryInterceptor Failed. " +
+                        "Max retries of ${maxRetries} reached. Unknown error."
+            )
+            .body("Request failed after $maxRetries attempts".toResponseBody(null))
+            .build()
     }
 }
 
