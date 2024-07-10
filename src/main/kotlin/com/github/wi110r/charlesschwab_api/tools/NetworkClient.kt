@@ -11,7 +11,8 @@ import com.github.wi110r.com.github.wi110r.charlesschwab_api.tools.Log as log
 internal object NetworkClient {
 
     private var client: OkHttpClient? = null
-    private var maxRetries = 60     // Sleeps 1second each retry
+    private var maxRetries = 60     // Sleeps each try
+    private var retrySleepMs = 1_000L
 
     /**
      * Returns the Singleton Instance of OkHttpclient
@@ -31,7 +32,7 @@ internal object NetworkClient {
     private fun buildClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(5_000, TimeUnit.MILLISECONDS)
-            .addInterceptor(createRetryInterceptor())
+            .addInterceptor(initRetryInterceptor())
             .retryOnConnectionFailure(true)
             .followRedirects(true)      // VERY IMPORTANT FOR ANDROID
             .followSslRedirects(true)       // ALSO MAYBE
@@ -72,46 +73,69 @@ internal object NetworkClient {
     /**
      *
      */
-    private fun createRetryInterceptor(): Interceptor {
-        var retryCount = 0
+
+
+    private fun initRetryInterceptor(): Interceptor {
 
         return object : Interceptor {
+
             override fun intercept(chain: Interceptor.Chain): Response {
-                val request: Request = chain.request()
-                var response: Response?
+                var retryCount = 0
+                val req = chain.request()
+                var response: Response? = null
 
-                while (retryCount <= maxRetries) {
+                while (retryCount <= maxRetries){
+
                     try {
-                        response = chain.proceed(request)
 
-                        // Check if the response is successful
+                        // Make request
+                        response = chain.proceed(req)
+
+                        // Return on Success
                         if (response.isSuccessful) {
                             return response
-                        } else {
-                            retryCount++
-                            Thread.sleep(1000)
+                        }
+
+                        // Close, increase count, Log, and sleep on Fail
+                        else {
+                            response.close()
+
+                            retryCount ++
+
                             log.w("charlesschwab-api.NetworkClient",
                                 "-- RETRY INTERCEPTOR TRIGGERED -- Response Code: ${response.code} " +
                                         "Msg: ${response.message} " +
                                         "Retry Count: $retryCount | Max Retries: $maxRetries")
+
+                            Thread.sleep(retrySleepMs)
                         }
+
+                        // Close, increase count, Log, and sleep on Fail
                     } catch (e: Exception) {
-                        // Retry the request
+
+                        // Response will Never be null at this point
+                        response?.close()
+
                         retryCount++
-                        Thread.sleep(1000)
-                        log.w("charlesschwab-api.NetworkClient","-- RETRY INTERCEPTOR TRIGGERED --" +
-                                "Retry Count: $retryCount | Max: $maxRetries Exception: ${e.message} \n" +
+
+                        log.w("charlesschwab-api.NetworkClient","Retry Interceptor Failed with" +
+                                " Exception: ${e.message} \n" +
                                 "${e.stackTrace}")
+
+                        Thread.sleep(retrySleepMs)
+
                     }
                 }
-                // Return the generic response if max retries reached
-                return makeGenericResponse(request)
+
+                // Return failed response after max retries reached
+                return createMaxRetriesReachedResponse(req)
             }
         }
     }
 
 
-    private fun makeGenericResponse(request: Request): Response {
+    private fun createMaxRetriesReachedResponse(request: Request): Response {
+
         return Response.Builder()
             .request(request)
             .protocol(okhttp3.Protocol.HTTP_1_1)
@@ -123,5 +147,7 @@ internal object NetworkClient {
             .body("Request failed after $maxRetries attempts".toResponseBody(null))
             .build()
     }
+
+
 }
 

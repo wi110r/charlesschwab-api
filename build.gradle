@@ -29,7 +29,7 @@ publishing {
         maven(MavenPublication) {
             groupId 'com.github.wi110r'
             artifactId 'charlesschwab-api'
-            version '1.1'
+            version '1.2'
             from components.java
         }
     }
