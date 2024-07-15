@@ -149,7 +149,7 @@ class CharlesSchwabApi private constructor(
             var attempts = 0
             var actKeys: AccountNumbersResponse? = null
             while (attempts != 5) {
-                actKeys = getAccountNumbers()
+                actKeys = getAccountNumbers(tokenResponse.access_token)
                 if (actKeys != null){
                     break
                 }
@@ -236,7 +236,7 @@ class CharlesSchwabApi private constructor(
                 var attempts = 0
                 var actKeys: AccountNumbersResponse? = null
                 while (attempts != 5) {
-                    actKeys = getAccountNumbers()
+                    actKeys = getAccountNumbers(tokenResponse.access_token)
                     if (actKeys != null){
                         break
                     }
@@ -713,12 +713,12 @@ class CharlesSchwabApi private constructor(
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //    Account Data Start
 
-    private fun getAccountNumbers(): AccountNumbersResponse?{
-        val at = getAccessToken()
+    private fun getAccountNumbers(accessToken: String): AccountNumbersResponse?{
+
         val req = Request.Builder()
             .get()
             .url(account_base_endpoint + "/accounts/accountNumbers")
-            .header("Authorization", "Bearer $at")
+            .header("Authorization", "Bearer $accessToken")
             .header("accept", "application/json")
             .build()
 
