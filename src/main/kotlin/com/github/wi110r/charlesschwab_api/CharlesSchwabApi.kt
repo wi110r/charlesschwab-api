@@ -33,9 +33,6 @@ class CharlesSchwabApi private constructor(
     private val authPath: String
 
 
-
-
-
     init {
 
         authPath = authSavePath ?: "csApi_auth.json"
@@ -94,7 +91,7 @@ class CharlesSchwabApi private constructor(
 
 
     /** Peforms the login required to obtain Refresh Token. Refresh Token expires every 7 days. */
-    fun login() {
+    fun loginBasicCommandLine() {
         // Build login url
         val url = "$auth_base_endpoint/authorize?client_id=key_here&redirect_uri=https://127.0.0.1"
             .replace("key_here", auth.key)
@@ -186,6 +183,100 @@ class CharlesSchwabApi private constructor(
             throw Exception("Request failed: ${response.code}\n${response.message} \n${response.body?.string()}")
         }
 
+    }
+
+
+    fun refreshTokenExpiry(): Long {
+        return auth.refreshTokenExpiryInMs
+    }
+
+
+    fun loginUrl(): String {
+        return "$auth_base_endpoint/authorize?client_id=key_here&redirect_uri=https://127.0.0.1"
+            .replace("key_here", auth.key)
+    }
+
+
+    fun loginWithCode(codeUrl: String): Boolean {
+        try {
+            if (!codeUrl!!.contains("https://127.0.0.1/?code=")) {
+                throw Exception("Something Went Wrong! No 'code=' found in url")
+            }
+            val auth_code = codeUrl.substringAfter("?code=").substringBeforeLast("%40&") + "@"
+
+            // Create form body
+            val formBody = FormBody.Builder()
+                .add("grant_type", "authorization_code")
+                .add("code", auth_code)
+                .add("redirect_uri", "https://127.0.0.1")
+                .build()
+
+            // Create Headers
+            val base64Credentials = Base64.getEncoder().encodeToString("${auth.key}:${auth.secret}".toByteArray())
+            val req = Request.Builder()
+                .url(auth_base_endpoint + "/token")
+                .post(formBody)
+                .addHeader("Authorization", "Basic $base64Credentials")
+                .addHeader("Content-Type", "application/x-www-form-urlencoded")
+                .build()
+
+            // Make request
+            val response = NetworkClient.getClient().newCall(req).execute()
+            if (response.isSuccessful) {
+
+                // Read response and convert to usable data class with expiration time in Ms
+                val tokenResponse = gson.fromJson(response.body?.string(), RefreshTokenResponse::class.java)
+                // A-Token expires in 30m. Minus 1min for time safety
+                val accessTokenExpiry = System.currentTimeMillis() + 1_800_000 - 60_000
+                // R-Token expires in 7days. Minus 1hour for time safety
+                val refreshTokenExpiry = System.currentTimeMillis() + 604_800_000 - 3_600_000
+                println("Tokens Acquired...Now fetching Account Numbers...")
+
+                // Get account numbers
+                var attempts = 0
+                var actKeys: AccountNumbersResponse? = null
+                while (attempts != 5) {
+                    actKeys = getAccountNumbers()
+                    if (actKeys != null){
+                        break
+                    }
+                    attempts += 1
+                    Thread.sleep(500)
+                }
+                if (actKeys == null){
+                    println("Failed to get account number keys. Please login() again")
+                    return false
+                }
+
+                println("Account Numbers retrieved successfully.")
+
+                auth = Authorization(
+                    auth.key,
+                    auth.secret,
+                    accountNumber = actKeys.accountNumber,
+                    accountNumberHashValue =  actKeys.hashValue,
+                    refresh_token = tokenResponse.refresh_token,
+                    access_token = tokenResponse.access_token,
+                    id_token = tokenResponse.id_token,
+                    accessTokenExpiryInMs = accessTokenExpiry,
+                    refreshTokenExpiryInMs = refreshTokenExpiry
+                )
+
+                // Save to file
+                FileHelper.writeFile(authPath, gson.toJson(auth))
+
+                return true
+            } else {
+                Log.w("${CharlesSchwabApi::class.java.simpleName}.login()", "Login " +
+                        "Request failed with Code: ${response.code} " +
+                        "MSG: ${response.message} \n" +
+                        "Body: ${response.body?.string()}")
+                return false
+            }
+        } catch (e: Exception) {
+            Log.w("CharlesSchwabApi.loginWithCode()", "Failed to login. Exception: \n${e.stackTrace}")
+            return false
+        }
     }
 
 

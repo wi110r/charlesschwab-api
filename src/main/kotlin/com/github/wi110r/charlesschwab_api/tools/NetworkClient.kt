@@ -32,7 +32,6 @@ internal object NetworkClient {
     private fun buildClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(5_000, TimeUnit.MILLISECONDS)
-            .addInterceptor(initRetryInterceptor())
             .retryOnConnectionFailure(true)
             .followRedirects(true)      // VERY IMPORTANT FOR ANDROID
             .followSslRedirects(true)       // ALSO MAYBE
@@ -40,41 +39,7 @@ internal object NetworkClient {
     }
 
 
-    /** Creates the URL with query parameters added to the end of it (from Map<String,*>)
-     *
-     * Map of parameters is converted to a params string '?key=value&key=value'
-     */
-    internal fun addParamsToUrl(urlString: String, params: Map<String, *>): String {
-
-        var queryString = "?"
-
-        for (k: String in params.keys) {
-            queryString += "$k=${params[k].toString()}&"
-        }
-
-        return urlString + queryString.substring(0, queryString.length - 2)
-    }
-
-
-    // TODO - Delete This... It's kinda dumb
-    internal fun buildPostRequest(url: String, headers: Map<String, String>, jsonBody: String): Request {
-        val builder = Request.Builder()
-            .url(url)
-            .post(jsonBody.toRequestBody("application/json; charset=utf-8".toMediaType()))
-
-        for ((k, v) in headers) {
-            builder.addHeader(k, v)
-        }
-
-        return builder.build()
-    }
-
-
-    /**
-     *
-     */
-
-
+    // TODO Delete me -- decided not to use it (causes problems)
     private fun initRetryInterceptor(): Interceptor {
 
         return object : Interceptor {
