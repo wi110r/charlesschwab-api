@@ -15,6 +15,9 @@ import com.google.gson.reflect.TypeToken
 import okhttp3.FormBody
 import okhttp3.Request
 import java.text.DecimalFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -41,6 +44,14 @@ class CharlesSchwabApi private constructor(
         // Check status of Refresh Token
         init_check_refresh_token()
         loadTopStocksList()
+    }
+
+
+    private fun convertTimestampToISODate(timestamp: Long): String {
+        val instant = Instant.ofEpochMilli(timestamp)
+        val localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate()
+        val formatter = DateTimeFormatter.ISO_LOCAL_DATE
+        return localDate.format(formatter)
     }
 
 
@@ -499,8 +510,10 @@ class CharlesSchwabApi private constructor(
         weeksAhead: Int = 4
     ) : OptionChain? {
         try {
-            val fDate: Long = System.currentTimeMillis()
-            val tDate: Long = fDate + (604_800_000L * weeksAhead.toLong())
+            val fDate = convertTimestampToDateyyyyMMdd(System.currentTimeMillis())
+            val tDate = convertTimestampToDateyyyyMMdd(
+                System.currentTimeMillis() + (604_800_000L * weeksAhead.toLong())
+            )
 
             val params = mutableListOf<String>()
             params.add("symbol=${symbol.uppercase()}")
