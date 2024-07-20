@@ -487,7 +487,6 @@ class CharlesSchwabApi private constructor(
 
     /** Gets option chain for symbol.
      * Note: All prices are x100
-     *
      * @param weeksAhead: Weeks to look forward for expiration dates. 4 is default
      * */
     fun getOptionChain(
