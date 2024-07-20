@@ -487,6 +487,8 @@ class CharlesSchwabApi private constructor(
 
     /** Gets option chain for symbol.
      * Note: All prices are x100
+     *
+     * @param weeksAhead: Weeks to look forward for expiration dates.
      * */
     fun getOptionChain(
         symbol: String,
@@ -495,17 +497,11 @@ class CharlesSchwabApi private constructor(
         includeUnderlyingQuote: Boolean? = true,
         range: String? = "NTM",     // ?
         strike: Double? = null,
-        fromDate: Long? = null,
-        toDate: Long? = null,
+        weeksAhead: Int = 4
     ) : OptionChain? {
         try {
-            val fDate = if (fromDate == null)
-                convertTimestampToDateyyyyMMdd(System.currentTimeMillis())
-            else convertTimestampToDateyyyyMMdd(fromDate)
-
-            val tDate = if (toDate == null)                                         // + 1 week
-                convertTimestampToDateyyyyMMdd(System.currentTimeMillis() + 604_800_000L)
-            else convertTimestampToDateyyyyMMdd(toDate)
+            val fDate: Long = System.currentTimeMillis()
+            val tDate: Long = fDate + (604_800_000L * weeksAhead.toLong())
 
             val params = mutableListOf<String>()
             params.add("symbol=${symbol.uppercase()}")
@@ -514,8 +510,8 @@ class CharlesSchwabApi private constructor(
             includeUnderlyingQuote?.let { params.add("includeUnderlyingQuote=$it") }
             strike?.let { params.add("strike=$it") }
             range?.let { params.add("range=$it") }
-            fromDate?.let { params.add("fromDate=${fDate }") }
-            toDate?.let { params.add("toDate=${tDate}") }
+            params.add("fromDate=${fDate }")
+            params.add("toDate=${tDate}")
 
             val url = "$market_data_base_endpoint/chains?${params.joinToString("&")}"
             val token = getAccessToken()
